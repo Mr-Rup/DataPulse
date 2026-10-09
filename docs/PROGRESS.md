@@ -2,9 +2,9 @@
 
 ## Current State
 - **Project:** DataPulse
-- **Phase:** DP-5 — Core descriptive profiling by role
-- **Last Completed Milestone:** Modular role-specific profilers implemented and wired into AnalysisReport
-- **Branch:** `dp-5-descriptive-profiling`
+- **Phase:** DP-6 — Quality checks and heuristic anomaly rules
+- **Last Completed Milestone:** Quality rules engine implemented with automated anomaly alerts
+- **Branch:** `dp-6-quality-rules`
 
 ## Phase History
 
@@ -104,8 +104,28 @@
   - `uv run pyright`: 0 errors.
   - Real data smoke test: verified on `taxi_zone_lookup.csv`.
 
+### DP-6: Quality checks and heuristic anomaly rules
+- **Status:** Completed
+- **Changes:**
+  - Implemented automated heuristic quality checks and anomaly detection in `src/datapulse/analysis/quality_rules.py`:
+    - `check_missingness`: severe (>=50%) and moderate (>=20%) missingness alerts.
+    - `check_duplicates`: duplicate rows alert with severity tiering.
+    - `check_constant_columns`: zero-variance / single-value columns.
+    - `check_high_cardinality`: high-cardinality categorical warnings (>50% cardinality ratio).
+    - `check_negative_values`: checks conventionally non-negative columns (fares, amounts, prices, distances, counts, ages, etc.).
+    - `check_numeric_outliers`: Tukey 1.5x IQR boundary detection.
+    - `check_chronology_inversion`: temporal pairs check (e.g. pickup/dropoff, start/end).
+  - Wired `evaluate_quality_rules()` into `api.analyze()`, populating `AnalysisReport.findings` and `AnalysisReport.warnings`.
+  - Added dedicated "Data Quality Findings & Anomalies" table to `src/datapulse/reporting/terminal.py`.
+  - Real data smoke test: verified on 3.47M TLC dataset; accurately detected 144k negative fares, 124 chronological dropoff-before-pickup inversions, and distance/fare outliers.
+  - Added test suite in `tests/analysis/test_quality_rules.py`.
+- **Validation:**
+  - `uv run pytest`: 56 passed in 0.40s.
+  - `uv run ruff check .`: 0 errors.
+  - `uv run pyright`: 0 errors.
+
 ## Next Exact Action
-- Start **DP-6: Quality checks and heuristic anomaly rules**.
+- Start **DP-7: Relationship and correlation analysis**.
 
 ## Do Not Do Yet
 - Do not hard-code taxi-specific business rules into generic profiler logic.

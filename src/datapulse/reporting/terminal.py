@@ -121,9 +121,7 @@ def display_report(report: AnalysisReport) -> None:
         console.print(num_table)
 
     # 2. Categorical Analysis
-    cat_cols = [
-        col for col in report.columns if col.inferred_role == "categorical"
-    ]
+    cat_cols = [col for col in report.columns if col.inferred_role == "categorical"]
     if cat_cols:
         cat_table = Table(title="Categorical Analysis")
         cat_table.add_column("Column")
@@ -157,9 +155,7 @@ def display_report(report: AnalysisReport) -> None:
         console.print(cat_table)
 
     # 3. Temporal Analysis
-    temporal_cols = [
-        col for col in report.columns if col.inferred_role == "temporal"
-    ]
+    temporal_cols = [col for col in report.columns if col.inferred_role == "temporal"]
     if temporal_cols:
         temp_table = Table(title="Date/Time Analysis")
         temp_table.add_column("Column")
@@ -255,6 +251,30 @@ def display_report(report: AnalysisReport) -> None:
                 f"{int(s.get('duplicate_count', 0)):,}",
             )
         console.print(id_table)
+
+    if report.findings:
+        findings_table = Table(title="Data Quality Findings & Anomalies")
+        findings_table.add_column("Severity")
+        findings_table.add_column("Rule ID")
+        findings_table.add_column("Columns")
+        findings_table.add_column("Title")
+        findings_table.add_column("Description")
+
+        for f in report.findings:
+            sev_color = (
+                "red"
+                if f.severity == "critical"
+                else ("yellow" if f.severity == "warning" else "blue")
+            )
+            cols_str = ", ".join(f.affected_columns) if f.affected_columns else "-"
+            findings_table.add_row(
+                f"[{sev_color}]{f.severity.upper()}[/{sev_color}]",
+                f.rule_id,
+                cols_str,
+                f.title,
+                f.description,
+            )
+        console.print(findings_table)
 
 
 def display_profile(target: AnalysisReport | DatasetProfiler) -> None:

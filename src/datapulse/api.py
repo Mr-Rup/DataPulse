@@ -4,6 +4,7 @@ from pathlib import Path
 
 from datapulse import __version__
 from datapulse.analysis.column_classifier import classify_columns
+from datapulse.analysis.quality_rules import evaluate_quality_rules
 from datapulse.config import AnalysisConfig
 from datapulse.models.report import (
     AnalysisReport,
@@ -108,6 +109,13 @@ def analyze(
         elapsed_seconds=elapsed,
     )
 
+    findings = evaluate_quality_rules(columns, duplicates, df=profiler.data)
+    warnings = [
+        f"[{f.severity.upper()}] {f.title}: {f.description}"
+        for f in findings
+        if f.severity in ("warning", "critical")
+    ]
+
     return AnalysisReport(
         schema_version="1.0.0",
         metadata=metadata,
@@ -115,6 +123,6 @@ def analyze(
         duplicates=duplicates,
         missing_values=missing_values,
         columns=columns,
-        findings=[],
-        warnings=[],
+        findings=findings,
+        warnings=warnings,
     )
