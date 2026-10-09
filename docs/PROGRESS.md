@@ -2,9 +2,9 @@
 
 ## Current State
 - **Project:** DataPulse
-- **Phase:** DP-4 — Column classification
-- **Last Completed Milestone:** Column classifier implemented with 8 analytical roles
-- **Branch:** `dp-4-column-classification`
+- **Phase:** DP-5 — Core descriptive profiling by role
+- **Last Completed Milestone:** Modular role-specific profilers implemented and wired into AnalysisReport
+- **Branch:** `dp-5-descriptive-profiling`
 
 ## Phase History
 
@@ -84,8 +84,28 @@
   - `uv run ruff check .`: 0 errors.
   - `uv run pyright`: 0 errors.
 
+### DP-5: Core descriptive profiling by role
+- **Status:** Completed
+- **Changes:**
+  - Implemented modular, role-specific descriptive statistics profilers in `src/datapulse/profiling/`:
+    - `numeric.py`: count, mean, std, min, 25%, median (50%), 75%, max, IQR, zeros count & %, negatives count & %, skewness.
+    - `categorical.py`: count, unique_count, cardinality %, mode, bounded `top_categories` (value, count, percentage).
+    - `temporal.py`: count, minimum, maximum, span_days, span_seconds, unique_count.
+    - `boolean.py`: count, true_count & %, false_count & %.
+    - `text.py`: count, min/max/mean/median lengths, empty_count & %, unique_count, cardinality %.
+    - `identifier.py`: count, unique_count, duplicate_count, uniqueness %, cardinality %.
+    - `column_profiler.py`: unified dispatcher `profile_column(series, total_rows, role, max_categories)`.
+  - Added `DatasetProfiler.profile_column()` and updated `api.analyze()` to populate rich role-specific `ColumnProfile.statistics`.
+  - Upgraded terminal report renderer in `src/datapulse/reporting/terminal.py` to display clean, dedicated tables for each analytical role.
+  - Added comprehensive test suite `tests/profiling/test_role_profilers.py`.
+- **Validation:**
+  - `uv run pytest`: 48 passed in 0.39s.
+  - `uv run ruff check .`: 0 errors.
+  - `uv run pyright`: 0 errors.
+  - Real data smoke test: verified on `taxi_zone_lookup.csv`.
+
 ## Next Exact Action
-- Start **DP-5: Core descriptive profiling by role**.
+- Start **DP-6: Quality checks and heuristic anomaly rules**.
 
 ## Do Not Do Yet
 - Do not hard-code taxi-specific business rules into generic profiler logic.

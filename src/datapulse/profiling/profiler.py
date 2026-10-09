@@ -4,6 +4,7 @@ import polars as pl
 
 from datapulse.analysis.column_classifier import classify_column
 from datapulse.ingestion.readers import read_source
+from datapulse.profiling.column_profiler import profile_column as calc_column_stats
 
 
 class DatasetProfiler:
@@ -215,4 +216,26 @@ class DatasetProfiler:
                 "missing_percentage": pl.Float64,
                 "unique_count": pl.UInt32,
             },
+        )
+
+    def profile_column(
+        self,
+        column: str,
+        role: str | None = None,
+        max_categories: int = 20,
+    ) -> dict[str, object]:
+        """Profile a column using role-specific descriptive statistics."""
+
+        series = self.data[column]
+        total_rows = self.data.height
+
+        if role is None:
+            classification = classify_column(series, total_rows)
+            role = classification.inferred_role
+
+        return calc_column_stats(
+            series,
+            total_rows,
+            role,
+            max_categories=max_categories,
         )

@@ -34,9 +34,6 @@ def analyze(
     overview = profiler.get_overview()
     missing_df = profiler.get_missing_values()
     duplicate_dict = profiler.get_duplicate_summary()
-    numeric_df = profiler.get_numeric_statistics()
-    categorical_df = profiler.get_categorical_statistics()
-    temporal_df = profiler.get_temporal_statistics()
     quality_df = profiler.get_column_quality()
 
     summary = DatasetSummary(
@@ -66,54 +63,13 @@ def analyze(
 
     quality_map = {row["column"]: row for row in quality_df.iter_rows(named=True)}
 
-    numeric_stats: dict[str, dict[str, float | None]] = {}
-    if numeric_df.width > 0:
-        for row in numeric_df.iter_rows(named=True):
-            stat_name = str(row["statistic"])
-            for col_name in numeric_df.columns:
-                if col_name == "statistic":
-                    continue
-                if col_name not in numeric_stats:
-                    numeric_stats[col_name] = {}
-                raw_val = row[col_name]
-                numeric_stats[col_name][stat_name] = (
-                    float(raw_val) if raw_val is not None else None
-                )
-
-    categorical_stats: dict[str, dict[str, float | int]] = {}
-    if categorical_df.height > 0:
-        for row in categorical_df.iter_rows(named=True):
-            col_name = row["column"]
-            categorical_stats[col_name] = {
-                "unique_count": int(row["unique_count"]),
-                "cardinality_percentage": float(row["cardinality_percentage"]),
-            }
-
-    temporal_stats: dict[str, dict[str, str | int]] = {}
-    if temporal_df.height > 0:
-        for row in temporal_df.iter_rows(named=True):
-            col_name = row["column"]
-            temporal_stats[col_name] = {
-                "minimum": str(row["minimum"]),
-                "maximum": str(row["maximum"]),
-                "unique_count": int(row["unique_count"]),
-            }
-
     classifications = classify_columns(profiler.data)
+    max_categories = config.max_categories if config else 20
 
     columns: list[ColumnProfile] = []
     for col_name, dtype_str in overview["schema"].items():
         q_info = quality_map.get(col_name, {})
         classification = classifications.get(col_name)
-        stats: dict[str, object] = {}
-
-        if col_name in numeric_stats:
-            stats.update(numeric_stats[col_name])
-        if col_name in categorical_stats:
-            stats.update(categorical_stats[col_name])
-        if col_name in temporal_stats:
-            stats.update(temporal_stats[col_name])
-
         role = (
             classification.inferred_role
             if classification
@@ -121,6 +77,12 @@ def analyze(
         )
         conf = classification.confidence if classification else 1.0
         reason = classification.reason if classification else ""
+
+        stats = profiler.profile_column(
+            col_name,
+            role=role,
+            max_categories=max_categories,
+        )
 
         profile = ColumnProfile(
             name=col_name,
