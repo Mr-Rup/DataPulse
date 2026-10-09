@@ -1,0 +1,44 @@
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "datapulse"
+version = "0.1.0"
+description = "A data profiling and analytical benchmarking toolkit."
+readme = "README.md"
+requires-python = ">=3.14,<3.15"
+dependencies = [
+    "polars",
+    "rich",
+    "typer",
+]
+
+[dependency-groups]
+dev = [
+    "pytest",
+    "ruff",
+    "pyright",
+]
+
+[project.scripts]
+datapulse = "datapulse.cli.app:app"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/datapulse"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+
+[tool.ruff]
+line-length = 88
+target-version = "py311"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B"]
+
+[tool.pyright]
+include = ["src", "tests"]
+pythonVersion = "3.11"
+typeCheckingMode = "basic"

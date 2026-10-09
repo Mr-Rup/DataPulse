@@ -1,0 +1,33 @@
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+dist/
+build/
+
+# Virtual environments
+.venv/
+venv/
+
+# Environment variables and secrets
+.env
+.env.*
+
+# Test and tooling caches
+.pytest_cache/
+.ruff_cache/
+.pyright/
+
+# Local datasets and generated results
+data/raw/*
+data/prepared/*
+benchmarks/datasets/*
+benchmarks/results/*
+
+# Keep directory placeholders
+!data/raw/.gitkeep
+!data/prepared/.gitkeep
+!data/metadata/
+!benchmarks/datasets/.gitkeep
+!benchmarks/results/.gitkeep
