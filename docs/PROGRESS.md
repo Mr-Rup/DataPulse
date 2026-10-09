@@ -4,7 +4,7 @@
 - **Project:** DataPulse
 - **Phase:** DP-2 — Report model and core API
 - **Last Completed Milestone:** Designed structured report dataclasses, implemented analyze() API and updated terminal renderer
-- **Branch:** `dp-2-report-model`
+- **Branch:** `main`
 
 ## Phase History
 
@@ -14,7 +14,7 @@
   - Resolved import ordering lint issue in `scripts/inspect_taxi_data.py`.
   - Updated `pyproject.toml` to focus description on automated tabular EDA.
   - Aligned `target-version = "py314"` in ruff and `pythonVersion = "3.14"` in pyright.
-  - Rewrote `README.md` to reflect pure EDA goals (deferring engine benchmarks to DataBench).
+  - Rewrote `README.md` to reflect pure EDA goals.
   - Updated `.gitignore` to exclude `reports/` and `*.html`.
   - Created `docs/PROGRESS.md` and `docs/DECISIONS.md`.
 - **Validation:**
@@ -54,11 +54,9 @@
   - `uv run pyright`: 0 errors.
 
 ## Next Exact Action
-- Review and merge `dp-2-report-model` into `main`, then start **DP-3: Ingestion and schema inspection** (Parquet, CSV, JSON, Excel).
+- Start **DP-3: Ingestion and schema inspection** (Parquet, CSV, JSON, Excel).
 
 ## Do Not Do Yet
 - Do not hard-code taxi-specific business rules into generic profiler logic.
 - Do not build custom exception hierarchies.
-- Do not start DataBench implementation before DataPulse V1 is stabilized.
 - Do not commit raw datasets into git.
-

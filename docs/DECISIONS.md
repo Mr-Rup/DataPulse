@@ -1,11 +1,9 @@
 # DataPulse Architecture & Technical Decisions (ADR Log)
 
-## ADR-001: Separation of DataPulse and DataBench
-- **Context:** Initial vision mixed profiling capabilities with comparative engine benchmarking in a single project.
-- **Decision:** Separate the two concerns into distinct projects:
-  - **DataPulse:** Reusable Python package and CLI for automated tabular exploratory data analysis (EDA).
-  - **DataBench:** Separate laboratory repository that measures analytical engines (Pandas, Polars eager/lazy, DuckDB), consuming DataPulse as a dependency for dataset inspection.
-- **Consequences:** Cleaner architecture, focused dependencies, and distinct portfolio deliverables.
+## ADR-001: Standalone Architecture & Core Scope
+- **Context:** DataPulse is designed as an automated, local-first exploratory data analysis (EDA) toolkit.
+- **Decision:** Establish DataPulse as a focused, reusable, standalone Python package and CLI for automated tabular EDA.
+- **Consequences:** Clear product identity, clean codebase, dedicated CLI, and standalone documentation.
 
 ## ADR-002: Python Runtime and Environment Tooling
 - **Context:** Project uses Windows with Python 3.14.

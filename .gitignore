@@ -1,4 +1,3 @@
-
 # Python
 __pycache__/
 *.py[cod]
@@ -19,17 +18,14 @@ venv/
 .ruff_cache/
 .pyright/
 
-# Local datasets and generated results
+# Local datasets and generated reports
 data/raw/*
 data/prepared/*
-benchmarks/datasets/*
-benchmarks/results/*
-reports/
+reports/*
 *.html
 
 # Keep directory placeholders
 !data/raw/.gitkeep
 !data/prepared/.gitkeep
 !data/metadata/
-!benchmarks/datasets/.gitkeep
-!benchmarks/results/.gitkeep
+!reports/.gitkeep
