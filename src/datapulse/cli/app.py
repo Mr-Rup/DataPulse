@@ -5,6 +5,7 @@ app = typer.Typer(
     help="Profile datasets and benchmark analytical engines.",
 )
 
+
 @app.callback()
 def main() -> None:
     """DataPulse command-line application."""

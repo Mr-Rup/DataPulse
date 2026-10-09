@@ -21,14 +21,14 @@ def download_file(url: str, destination: Path, force: bool = False) -> None:
         downloaded = block_num * block_size
         if total_size > 0:
             percentage = min(100.0, (downloaded / total_size) * 100)
-            downloaded_mb = downloaded / (1024 ** 2)
-            total_mb = total_size / (1024 ** 2)
+            downloaded_mb = downloaded / (1024**2)
+            total_mb = total_size / (1024**2)
             sys.stdout.write(
                 f"\rProgress: {percentage:.1f}% ({downloaded_mb:.1f}/{total_mb:.1f} MB)"
             )
             sys.stdout.flush()
         else:
-            downloaded_mb = downloaded / (1024 ** 2)
+            downloaded_mb = downloaded / (1024**2)
             sys.stdout.write(f"\rDownloaded: {downloaded_mb:.1f} MB")
             sys.stdout.flush()
 

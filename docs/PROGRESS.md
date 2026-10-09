@@ -2,9 +2,9 @@
 
 ## Current State
 - **Project:** DataPulse
-- **Phase:** DP-3 — Ingestion and schema inspection
-- **Last Completed Milestone:** Multi-format ingestion implemented (Parquet, CSV, JSON, Excel) with lazy reader
-- **Branch:** `dp-3-ingestion`
+- **Phase:** DP-4 — Column classification
+- **Last Completed Milestone:** Column classifier implemented with 8 analytical roles
+- **Branch:** `dp-4-column-classification`
 
 ## Phase History
 
@@ -68,8 +68,24 @@
   - `uv run ruff check .`: 0 errors.
   - `uv run pyright`: 0 errors.
 
+### DP-4: Column classification
+- **Status:** Completed
+- **Changes:**
+  - Implemented heuristic rule-based column classification engine in `src/datapulse/analysis/column_classifier.py`.
+  - Roles supported: `numeric`, `categorical`, `temporal`, `boolean`, `text`, `identifier`, `constant`, `other`.
+  - Distinguishes coded low-cardinality integers (e.g. `payment_type`, `VendorID`) as categorical rather than continuous numeric.
+  - Detects IDs and keys (`PULocationID`, `uuid`, etc.) based on cardinality and naming patterns.
+  - Detects freeform text columns based on average string length.
+  - Added `confidence` and `inference_reason` to `ColumnClassification` and `ColumnProfile`.
+  - Wired classifier into `DatasetProfiler.get_column_quality()` and `analyze()`.
+  - Created test suite `tests/analysis/test_column_classifier.py` covering all roles and heuristics.
+- **Validation:**
+  - `uv run pytest`: 36 passed in 0.40s.
+  - `uv run ruff check .`: 0 errors.
+  - `uv run pyright`: 0 errors.
+
 ## Next Exact Action
-- Review and merge `dp-3-ingestion` into `main`, then start **DP-4: Column classification**.
+- Start **DP-5: Core descriptive profiling by role**.
 
 ## Do Not Do Yet
 - Do not hard-code taxi-specific business rules into generic profiler logic.

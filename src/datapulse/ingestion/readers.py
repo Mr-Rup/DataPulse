@@ -52,7 +52,7 @@ def read_source(
         )
 
     file_format = SUPPORTED_EXTENSIONS[suffix]
-    file_size_mb = round(size_bytes / (1024 ** 2), 2)
+    file_size_mb = round(size_bytes / (1024**2), 2)
     source_info = SourceInfo(
         file_path=path,
         file_name=path.name,

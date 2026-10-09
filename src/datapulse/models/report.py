@@ -53,6 +53,8 @@ class ColumnProfile:
     name: str
     physical_type: str
     inferred_role: str = "unknown"
+    confidence: float = 1.0
+    inference_reason: str = ""
     null_count: int = 0
     missing_percentage: float = 0.0
     unique_count: int = 0

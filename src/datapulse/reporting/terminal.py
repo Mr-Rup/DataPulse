@@ -81,8 +81,7 @@ def display_report(report: AnalysisReport) -> None:
     console.print(quality_table)
 
     cat_cols = [
-        col for col in report.columns
-        if "cardinality_percentage" in col.statistics
+        col for col in report.columns if "cardinality_percentage" in col.statistics
     ]
     if cat_cols:
         cat_table = Table(title="Categorical Analysis")
@@ -99,7 +98,8 @@ def display_report(report: AnalysisReport) -> None:
         console.print(cat_table)
 
     temporal_cols = [
-        col for col in report.columns
+        col
+        for col in report.columns
         if "minimum" in col.statistics and "maximum" in col.statistics
     ]
     if temporal_cols:
@@ -127,5 +127,6 @@ def display_profile(target: AnalysisReport | DatasetProfiler) -> None:
         return
 
     from datapulse.api import analyze
+
     report = analyze(target.file_path)
     display_report(report)

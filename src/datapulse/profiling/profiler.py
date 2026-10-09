@@ -2,6 +2,7 @@ from pathlib import Path
 
 import polars as pl
 
+from datapulse.analysis.column_classifier import classify_column
 from datapulse.ingestion.readers import read_source
 
 
@@ -33,11 +34,10 @@ class DatasetProfiler:
             "column_count": self.data.width,
             "columns": self.data.columns,
             "schema": {
-                column: str(dtype)
-                for column, dtype in self.data.schema.items()
+                column: str(dtype) for column, dtype in self.data.schema.items()
             },
         }
-    
+
     def get_missing_values(self) -> pl.DataFrame:
         """Calculate missing-value counts and percentages."""
 
@@ -51,9 +51,7 @@ class DatasetProfiler:
             non_missing_count = total_rows - null_count
 
             missing_percentage = (
-                (null_count / total_rows) * 100
-                if total_rows > 0
-                else 0.0
+                (null_count / total_rows) * 100 if total_rows > 0 else 0.0
             )
 
             missing_summary.append(
@@ -83,9 +81,7 @@ class DatasetProfiler:
         duplicate_rows = total_rows - unique_rows
 
         duplicate_percentage = (
-            (duplicate_rows / total_rows) * 100
-            if total_rows > 0
-            else 0.0
+            (duplicate_rows / total_rows) * 100 if total_rows > 0 else 0.0
         )
 
         return {
@@ -99,9 +95,7 @@ class DatasetProfiler:
         """Calculate descriptive statistics for numeric columns."""
 
         numeric_columns = [
-            name
-            for name, dtype in self.data.schema.items()
-            if dtype.is_numeric()
+            name for name, dtype in self.data.schema.items() if dtype.is_numeric()
         ]
 
         if not numeric_columns:
@@ -115,8 +109,7 @@ class DatasetProfiler:
         categorical_columns = [
             name
             for name, dtype in self.data.schema.items()
-            if dtype == pl.String or dtype == pl.Categorical
-            or dtype == pl.Enum
+            if dtype == pl.String or dtype == pl.Categorical or dtype == pl.Enum
         ]
 
         if not categorical_columns:
@@ -135,18 +128,14 @@ class DatasetProfiler:
             unique_count = self.data[column].n_unique()
 
             cardinality_percentage = (
-                (unique_count / total_rows) * 100
-                if total_rows > 0
-                else 0.0
+                (unique_count / total_rows) * 100 if total_rows > 0 else 0.0
             )
 
             summaries.append(
                 {
                     "column": column,
                     "unique_count": unique_count,
-                    "cardinality_percentage": round(
-                        cardinality_percentage, 2
-                    ),
+                    "cardinality_percentage": round(cardinality_percentage, 2),
                 }
             )
 
@@ -156,9 +145,7 @@ class DatasetProfiler:
         """Summarize date and datetime columns."""
 
         temporal_columns = [
-            name
-            for name, dtype in self.data.schema.items()
-            if dtype.is_temporal()
+            name for name, dtype in self.data.schema.items() if dtype.is_temporal()
         ]
 
         schema = {
@@ -200,21 +187,11 @@ class DatasetProfiler:
             null_count = series.null_count()
             non_null = series.drop_nulls()
 
-            if dtype == pl.Boolean:
-                category = "boolean"
-            elif dtype.is_temporal():
-                category = "temporal"
-            elif dtype.is_numeric():
-                category = "numeric"
-            elif dtype in (pl.String, pl.Categorical, pl.Enum):
-                category = "categorical"
-            else:
-                category = "other"
+            classification = classify_column(series, total_rows)
+            category = classification.inferred_role
 
             missing_percentage = (
-                null_count / total_rows * 100
-                if total_rows > 0
-                else 0.0
+                null_count / total_rows * 100 if total_rows > 0 else 0.0
             )
 
             summaries.append(

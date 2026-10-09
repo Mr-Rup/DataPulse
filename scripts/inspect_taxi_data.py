@@ -21,10 +21,9 @@ time_summary = data.select(
     pl.col("tpep_pickup_datetime").max().alias("latest_pickup"),
     pl.col("tpep_dropoff_datetime").min().alias("earliest_dropoff"),
     pl.col("tpep_dropoff_datetime").max().alias("latest_dropoff"),
-    (
-        pl.col("tpep_dropoff_datetime")
-        < pl.col("tpep_pickup_datetime")
-    ).sum().alias("negative_duration_rows"),
+    (pl.col("tpep_dropoff_datetime") < pl.col("tpep_pickup_datetime"))
+    .sum()
+    .alias("negative_duration_rows"),
 ).collect()
 
 print(time_summary)
@@ -45,10 +44,7 @@ print(numeric_summary)
 print("\n--- Examples: negative trip duration ---")
 
 negative_duration_examples = (
-    data.filter(
-        pl.col("tpep_dropoff_datetime")
-        < pl.col("tpep_pickup_datetime")
-    )
+    data.filter(pl.col("tpep_dropoff_datetime") < pl.col("tpep_pickup_datetime"))
     .select(
         "VendorID",
         "tpep_pickup_datetime",
@@ -114,10 +110,7 @@ print(negative_fare_breakdown)
 print("\n--- Negative fares with positive total amounts ---")
 
 inconsistent_amounts = (
-    data.filter(
-        (pl.col("fare_amount") < 0)
-        & (pl.col("total_amount") > 0)
-    )
+    data.filter((pl.col("fare_amount") < 0) & (pl.col("total_amount") > 0))
     .select(
         "payment_type",
         "fare_amount",

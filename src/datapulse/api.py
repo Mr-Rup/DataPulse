@@ -3,6 +3,7 @@ from datetime import UTC, datetime
 from pathlib import Path
 
 from datapulse import __version__
+from datapulse.analysis.column_classifier import classify_columns
 from datapulse.config import AnalysisConfig
 from datapulse.models.report import (
     AnalysisReport,
@@ -63,10 +64,7 @@ def analyze(
         for row in missing_df.iter_rows(named=True)
     ]
 
-    quality_map = {
-        row["column"]: row
-        for row in quality_df.iter_rows(named=True)
-    }
+    quality_map = {row["column"]: row for row in quality_df.iter_rows(named=True)}
 
     numeric_stats: dict[str, dict[str, float | None]] = {}
     if numeric_df.width > 0:
@@ -101,9 +99,12 @@ def analyze(
                 "unique_count": int(row["unique_count"]),
             }
 
+    classifications = classify_columns(profiler.data)
+
     columns: list[ColumnProfile] = []
     for col_name, dtype_str in overview["schema"].items():
         q_info = quality_map.get(col_name, {})
+        classification = classifications.get(col_name)
         stats: dict[str, object] = {}
 
         if col_name in numeric_stats:
@@ -113,10 +114,20 @@ def analyze(
         if col_name in temporal_stats:
             stats.update(temporal_stats[col_name])
 
+        role = (
+            classification.inferred_role
+            if classification
+            else q_info.get("category", "unknown")
+        )
+        conf = classification.confidence if classification else 1.0
+        reason = classification.reason if classification else ""
+
         profile = ColumnProfile(
             name=col_name,
             physical_type=dtype_str,
-            inferred_role=q_info.get("category", "unknown"),
+            inferred_role=role,
+            confidence=conf,
+            inference_reason=reason,
             null_count=int(q_info.get("null_count", 0)),
             missing_percentage=float(q_info.get("missing_percentage", 0.0)),
             unique_count=int(q_info.get("unique_count", 0)),

@@ -21,6 +21,7 @@ def sample_parquet(tmp_path):
 
     return file_path
 
+
 def test_profiler_overview(sample_parquet):
     profiler = DatasetProfiler(sample_parquet)
 
@@ -30,25 +31,23 @@ def test_profiler_overview(sample_parquet):
     assert overview["row_count"] == 3
     assert overview["column_count"] == 3
 
+
 def test_profiler_missing_values(sample_parquet):
     profiler = DatasetProfiler(sample_parquet)
 
     missing = profiler.get_missing_values()
 
-    trip_distance = missing.filter(
-        pl.col("column") == "trip_distance"
-    )
+    trip_distance = missing.filter(pl.col("column") == "trip_distance")
 
     assert trip_distance["null_count"][0] == 1
     assert trip_distance["non_missing_count"][0] == 2
-    assert trip_distance["missing_percentage"][0] == pytest.approx(
-        33.33, abs=0.01
-    )
+    assert trip_distance["missing_percentage"][0] == pytest.approx(33.33, abs=0.01)
 
     fare_amount = missing.filter(pl.col("column") == "fare_amount")
 
     assert fare_amount["null_count"][0] == 0
     assert fare_amount["missing_percentage"][0] == 0.0
+
 
 def test_profiler_numeric_statistics(sample_parquet):
     profiler = DatasetProfiler(sample_parquet)
@@ -76,21 +75,18 @@ def test_profiler_categorical_statistics(tmp_path):
     profiler = DatasetProfiler(file_path)
     statistics = profiler.get_categorical_statistics()
 
-    payment_type = statistics.filter(
-        pl.col("column") == "payment_type"
-    )
+    payment_type = statistics.filter(pl.col("column") == "payment_type")
 
     assert payment_type["unique_count"][0] == 2
     assert payment_type["cardinality_percentage"][0] == 50.0
 
-    borough = statistics.filter(
-        pl.col("column") == "borough"
-    )
+    borough = statistics.filter(pl.col("column") == "borough")
 
     assert borough["unique_count"][0] == 2
     assert borough["cardinality_percentage"][0] == 50.0
 
     assert "fare_amount" not in statistics["column"].to_list()
+
 
 def test_profiler_rejects_missing_file(tmp_path):
     missing_file = tmp_path / "missing.parquet"
@@ -98,12 +94,14 @@ def test_profiler_rejects_missing_file(tmp_path):
     with pytest.raises(FileNotFoundError):
         DatasetProfiler(missing_file)
 
+
 def test_profiler_rejects_unsupported_file(tmp_path):
     txt_file = tmp_path / "sample.txt"
     txt_file.write_text("fare_amount\n10.0\n", encoding="utf-8")
 
     with pytest.raises(ValueError):
         DatasetProfiler(txt_file)
+
 
 def test_profiler_duplicate_summary(tmp_path):
     data = pl.DataFrame(
@@ -154,17 +152,14 @@ def test_profiler_temporal_statistics(tmp_path):
     assert statistics["maximum"][0] == "2025-01-02"
     assert statistics["unique_count"][0] == 2
 
+
 def test_profiler_column_quality(sample_parquet):
     profiler = DatasetProfiler(sample_parquet)
     quality = profiler.get_column_quality()
 
-    trip_distance = quality.filter(
-        pl.col("column") == "trip_distance"
-    )
+    trip_distance = quality.filter(pl.col("column") == "trip_distance")
 
     assert trip_distance["category"][0] == "numeric"
     assert trip_distance["null_count"][0] == 1
     assert trip_distance["unique_count"][0] == 2
-    assert trip_distance["missing_percentage"][0] == pytest.approx(
-        33.33, abs=0.01
-    )
+    assert trip_distance["missing_percentage"][0] == pytest.approx(33.33, abs=0.01)
