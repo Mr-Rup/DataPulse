@@ -2,9 +2,9 @@
 
 ## Current State
 - **Project:** DataPulse
-- **Phase:** DP-1 — Real-data validation vertical slice
-- **Last Completed Milestone:** Downloaded TLC Parquet & CSV, executed profiling runs, and validated observed findings
-- **Branch:** `dp-1-real-data-validation`
+- **Phase:** DP-2 — Report model and core API
+- **Last Completed Milestone:** Designed structured report dataclasses, implemented analyze() API and updated terminal renderer
+- **Branch:** `dp-2-report-model`
 
 ## Phase History
 
@@ -38,8 +38,23 @@
   - `uv run ruff check .`: 0 errors.
   - `uv run pyright`: 0 errors.
 
+### DP-2: Report model and core API
+- **Status:** Completed
+- **Changes:**
+  - Implemented `@dataclass` report models in `src/datapulse/models/report.py` (`ReportMetadata`, `DatasetSummary`, `DuplicateSummary`, `MissingSummary`, `ColumnProfile`, `Finding`, `AnalysisReport`).
+  - Added `to_dict()` and `to_json()` methods to `AnalysisReport` for clean serialization.
+  - Created `src/datapulse/config.py` with `AnalysisConfig`.
+  - Implemented `src/datapulse/api.py` with `analyze(file_path, config=None) -> AnalysisReport`.
+  - Exported public symbols `analyze`, `AnalysisReport`, `AnalysisConfig`, and `__version__ = "0.1.0"` in `src/datapulse/__init__.py`.
+  - Refactored `src/datapulse/reporting/terminal.py` (`display_report`, `display_profile`) to consume `AnalysisReport`.
+  - Added unit test suites `tests/models/test_report.py` and `tests/test_api.py`.
+- **Validation:**
+  - `uv run pytest`: 13 passed in 0.26s.
+  - `uv run ruff check .`: 0 errors.
+  - `uv run pyright`: 0 errors.
+
 ## Next Exact Action
-- Review and merge `dp-1-real-data-validation` into `main`, then start **DP-2: Report model and `analyze()` API**.
+- Review and merge `dp-2-report-model` into `main`, then start **DP-3: Ingestion and schema inspection** (Parquet, CSV, JSON, Excel).
 
 ## Do Not Do Yet
 - Do not hard-code taxi-specific business rules into generic profiler logic.
