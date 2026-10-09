@@ -75,6 +75,25 @@ class Finding:
 
 
 @dataclass
+class CorrelationPair:
+    """Pairwise correlation metric between two columns."""
+
+    column_a: str
+    column_b: str
+    coefficient: float
+    method: str = "pearson"
+
+
+@dataclass
+class KeyCandidate:
+    """A detected primary key or unique identifier candidate."""
+
+    column: str
+    unique_count: int
+    is_primary_key_candidate: bool
+
+
+@dataclass
 class AnalysisReport:
     """Structured report produced by DataPulse."""
 
@@ -86,6 +105,8 @@ class AnalysisReport:
     columns: list[ColumnProfile] = field(default_factory=list)
     findings: list[Finding] = field(default_factory=list)
     warnings: list[str] = field(default_factory=list)
+    correlations: list[CorrelationPair] = field(default_factory=list)
+    key_candidates: list[KeyCandidate] = field(default_factory=list)
 
     def to_dict(self) -> dict[str, Any]:
         """Convert the report to a dictionary representation."""

@@ -276,6 +276,58 @@ def display_report(report: AnalysisReport) -> None:
             )
         console.print(findings_table)
 
+    if report.correlations:
+        top_corr = report.correlations[:10]
+        corr_table = Table(title="Top Numeric Correlations")
+        corr_table.add_column("Column A")
+        corr_table.add_column("Column B")
+        corr_table.add_column("Correlation (r)", justify="right")
+        corr_table.add_column("Method")
+        corr_table.add_column("Strength")
+
+        for pair in top_corr:
+            abs_val = abs(pair.coefficient)
+            if abs_val >= 0.85:
+                strength = "Very Strong"
+                color = "red"
+            elif abs_val >= 0.60:
+                strength = "Strong"
+                color = "yellow"
+            elif abs_val >= 0.30:
+                strength = "Moderate"
+                color = "cyan"
+            else:
+                strength = "Weak"
+                color = "white"
+
+            corr_table.add_row(
+                pair.column_a,
+                pair.column_b,
+                f"[{color}]{pair.coefficient:+.4f}[/{color}]",
+                pair.method,
+                strength,
+            )
+        console.print(corr_table)
+
+    if report.key_candidates:
+        key_table = Table(title="Key & Identifier Candidates")
+        key_table.add_column("Column")
+        key_table.add_column("Unique Count", justify="right")
+        key_table.add_column("Primary Key Candidate")
+
+        for key in report.key_candidates:
+            status = (
+                "[green]Yes (100% unique, 0 nulls)[/green]"
+                if key.is_primary_key_candidate
+                else "No"
+            )
+            key_table.add_row(
+                key.column,
+                f"{key.unique_count:,}",
+                status,
+            )
+        console.print(key_table)
+
 
 def display_profile(target: AnalysisReport | DatasetProfiler) -> None:
     """Display profile for an AnalysisReport or DatasetProfiler in the terminal."""

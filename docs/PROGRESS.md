@@ -2,9 +2,9 @@
 
 ## Current State
 - **Project:** DataPulse
-- **Phase:** DP-6 — Quality checks and heuristic anomaly rules
-- **Last Completed Milestone:** Quality rules engine implemented with automated anomaly alerts
-- **Branch:** `dp-6-quality-rules`
+- **Phase:** DP-7 — Relationship and correlation analysis
+- **Last Completed Milestone:** Correlation matrices, key candidate detection, and collinearity alerts implemented
+- **Branch:** `dp-7-relationships`
 
 ## Phase History
 
@@ -124,8 +124,25 @@
   - `uv run ruff check .`: 0 errors.
   - `uv run pyright`: 0 errors.
 
+### DP-7: Relationship and correlation analysis
+- **Status:** Completed
+- **Changes:**
+  - Implemented dependency-free native Polars relationship and correlation engine in `src/datapulse/analysis/relationships.py`:
+    - `compute_correlations`: parallel pairwise numeric correlation computation (`pearson` and `spearman`) via native `pl.corr()`.
+    - `find_key_candidates`: detects 100% unique, zero-null primary key candidate columns.
+    - `evaluate_collinear_findings`: automatically generates findings for highly collinear pairs (`|r| >= 0.90`) to alert on leakage or redundancy.
+  - Added `CorrelationPair` and `KeyCandidate` data models to `src/datapulse/models/report.py` and connected them to `AnalysisReport`.
+  - Wired relationship computations into `api.analyze()`.
+  - Added "Top Numeric Correlations" and "Key & Identifier Candidates" tables to terminal report renderer.
+  - Added test suite in `tests/analysis/test_relationships.py`.
+- **Validation:**
+  - `uv run pytest`: 62 passed in 0.42s.
+  - `uv run ruff check .`: 0 errors.
+  - `uv run pyright`: 0 errors.
+  - Smoke tests: verified on real datasets (`taxi_zone_lookup.csv` accurately identified `LocationID` as primary key candidate).
+
 ## Next Exact Action
-- Start **DP-7: Relationship and correlation analysis**.
+- Start **DP-8: Multi-format reporting (Terminal, JSON, HTML)**.
 
 ## Do Not Do Yet
 - Do not hard-code taxi-specific business rules into generic profiler logic.
