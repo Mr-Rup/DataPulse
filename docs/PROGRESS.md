@@ -2,9 +2,9 @@
 
 ## Current State
 - **Project:** DataPulse
-- **Phase:** DP-10 — Performance, sampling, and scale validation
-- **Last Completed Milestone:** Full scale benchmark on 3.475M row TLC parquet (3.78s execution, ~1.2M rows/s sampled throughput), configuration validation, and scale test suite
-- **Branch:** `dp-10-performance-scale`
+- **Phase:** DP-11 — Packaging, polish, and release candidate
+- **Last Completed Milestone:** Complete package build verified (`uv build`), comprehensive documentation in `README.md`, end-to-end smoke tests passing, 85 unit tests passing with 0 lint/type errors
+- **Branch:** `dp-11-release-candidate`
 
 ## Phase History
 
@@ -191,13 +191,35 @@
   - `uv run ruff check .`: 0 errors.
   - `uv run pyright`: 0 errors.
 
-## Next Exact Action
-- Start **DP-11: Release candidate, documentation polish, and packaging**.
+### DP-11: Release candidate, documentation polish, and packaging
+- **Status:** Completed
+- **Changes:**
+  - Expanded `README.md` into comprehensive product documentation:
+    - Overview, architecture, and technology stack.
+    - Multi-format ingestion support (Parquet, CSV, JSON/NDJSON, Excel).
+    - Heuristic column classification rules and analytical roles.
+    - Role-specific descriptive statistics and data quality rules.
+    - Pairwise correlations, collinearity detection, and primary key discovery.
+    - CLI options table and command examples.
+    - Python API usage, configuration loading, and report export methods.
+    - Performance & scale benchmarks table (NYC TLC 3.475M rows).
+  - Updated `pyproject.toml` with `license = "MIT"` and wheel packaging definitions.
+  - Verified package distribution build (`uv build`): generated `datapulse-0.1.0.tar.gz` and `datapulse-0.1.0-py3-none-any.whl`.
+  - Executed end-to-end smoke tests on real TLC datasets (`reports/smoke_report.html`).
+- **Validation:**
+  - `uv run pytest`: 85 passed in 0.75s.
+  - `uv run ruff check .`: 0 errors.
+  - `uv run pyright`: 0 errors.
+  - `uv build`: cleanly generated sdist and wheel.
 
-## Do Not Do Yet
-- Do not hard-code taxi-specific business rules into generic profiler logic.
-- Do not build custom exception hierarchies.
-- Do not commit raw datasets into git.
+## Next Exact Action
+- **DataPulse Phase 1 is 100% complete!** All milestones from DP-0 through DP-11 have been successfully implemented, validated against real TLC datasets, and merged into `main`. Ready for review.
+
+## Project Rules Maintained
+- DataPulse remains 100% standalone with zero references to outside projects.
+- Standard Python built-in exception types (`ValueError`, `FileNotFoundError`) utilized exclusively.
+- Raw datasets safely ignored and excluded from git commits.
+
 
 
 
