@@ -2,31 +2,33 @@ from pathlib import Path
 
 import polars as pl
 
+from datapulse.ingestion.readers import read_source
+
 
 class DatasetProfiler:
-    """Profile a Parquet dataset using Polars."""
+    """Profile a tabular dataset using Polars."""
 
-    def __init__(self, file_path: str | Path) -> None:
+    def __init__(
+        self,
+        file_path: str | Path,
+        *,
+        sheet_name: str | None = None,
+        separator: str | None = None,
+    ) -> None:
         self.file_path = Path(file_path)
-
-        if not self.file_path.exists():
-            raise FileNotFoundError(
-                f"Dataset not found: {self.file_path}"
-            )
-
-        if self.file_path.suffix.lower() != ".parquet":
-            raise ValueError(
-                "Only Parquet files are supported in Phase 1."
-            )
-
-        self.data = pl.read_parquet(self.file_path)
+        self.lazy_data, self.source_info = read_source(
+            self.file_path,
+            sheet_name=sheet_name,
+            separator=separator,
+        )
+        self.data = self.lazy_data.collect()
 
     def get_overview(self) -> dict:
         """Return basic dataset metadata."""
 
         return {
-            "file_name": self.file_path.name,
-            "file_size_mb": round(self.file_path.stat().st_size / (1024 ** 2), 2),
+            "file_name": self.source_info.file_name,
+            "file_size_mb": self.source_info.file_size_mb,
             "row_count": self.data.height,
             "column_count": self.data.width,
             "columns": self.data.columns,

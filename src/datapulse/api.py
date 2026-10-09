@@ -24,13 +24,11 @@ def analyze(
     start_time = time.perf_counter()
     path = Path(file_path)
 
-    if not path.exists():
-        raise FileNotFoundError(f"Dataset not found: {path}")
-
-    if path.suffix.lower() != ".parquet":
-        raise ValueError("Only Parquet files are supported in Phase 1.")
-
-    profiler = DatasetProfiler(path)
+    profiler = DatasetProfiler(
+        path,
+        sheet_name=config.sheet_name if config else None,
+        separator=config.separator if config else None,
+    )
 
     overview = profiler.get_overview()
     missing_df = profiler.get_missing_values()

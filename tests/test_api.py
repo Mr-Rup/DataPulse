@@ -61,9 +61,42 @@ def test_analyze_rejects_missing_file(tmp_path):
         analyze(missing_file)
 
 
-def test_analyze_rejects_non_parquet_file(tmp_path):
-    csv_file = tmp_path / "sample.csv"
-    csv_file.write_text("a,b\n1,2\n", encoding="utf-8")
+def test_analyze_rejects_unsupported_file(tmp_path):
+    txt_file = tmp_path / "sample.txt"
+    txt_file.write_text("a,b\n1,2\n", encoding="utf-8")
 
     with pytest.raises(ValueError):
-        analyze(csv_file)
+        analyze(txt_file)
+
+
+def test_analyze_csv(tmp_path):
+    csv_file = tmp_path / "test.csv"
+    csv_file.write_text("col_a,col_b\n10,foo\n20,bar\n", encoding="utf-8")
+
+    report = analyze(csv_file)
+    assert report.summary.file_name == "test.csv"
+    assert report.summary.row_count == 2
+    assert report.summary.column_count == 2
+    assert "col_a" in report.summary.schema
+
+
+def test_analyze_json(tmp_path):
+    json_file = tmp_path / "test.json"
+    content = '[{"id": 1, "name": "A"}, {"id": 2, "name": "B"}]'
+    json_file.write_text(content, encoding="utf-8")
+
+    report = analyze(json_file)
+    assert report.summary.file_name == "test.json"
+    assert report.summary.row_count == 2
+    assert report.summary.column_count == 2
+
+
+def test_analyze_excel(tmp_path):
+    excel_file = tmp_path / "test.xlsx"
+    df = pl.DataFrame({"metric": [1, 2], "score": [90.5, 85.0]})
+    df.write_excel(excel_file)
+
+    report = analyze(excel_file)
+    assert report.summary.file_name == "test.xlsx"
+    assert report.summary.row_count == 2
+    assert report.summary.column_count == 2

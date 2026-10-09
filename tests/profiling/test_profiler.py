@@ -98,12 +98,12 @@ def test_profiler_rejects_missing_file(tmp_path):
     with pytest.raises(FileNotFoundError):
         DatasetProfiler(missing_file)
 
-def test_profiler_rejects_non_parquet_file(tmp_path):
-    csv_file = tmp_path / "sample.csv"
-    csv_file.write_text("fare_amount\n10.0\n", encoding="utf-8")
+def test_profiler_rejects_unsupported_file(tmp_path):
+    txt_file = tmp_path / "sample.txt"
+    txt_file.write_text("fare_amount\n10.0\n", encoding="utf-8")
 
     with pytest.raises(ValueError):
-        DatasetProfiler(csv_file)
+        DatasetProfiler(txt_file)
 
 def test_profiler_duplicate_summary(tmp_path):
     data = pl.DataFrame(

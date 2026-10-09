@@ -2,9 +2,9 @@
 
 ## Current State
 - **Project:** DataPulse
-- **Phase:** DP-2 — Report model and core API
-- **Last Completed Milestone:** Designed structured report dataclasses, implemented analyze() API and updated terminal renderer
-- **Branch:** `main`
+- **Phase:** DP-3 — Ingestion and schema inspection
+- **Last Completed Milestone:** Multi-format ingestion implemented (Parquet, CSV, JSON, Excel) with lazy reader
+- **Branch:** `dp-3-ingestion`
 
 ## Phase History
 
@@ -53,10 +53,26 @@
   - `uv run ruff check .`: 0 errors.
   - `uv run pyright`: 0 errors.
 
+### DP-3: Ingestion and schema inspection
+- **Status:** Completed
+- **Changes:**
+  - Added `fastexcel` to project dependencies and `xlsxwriter` to test dev dependencies in `pyproject.toml`.
+  - Created `src/datapulse/ingestion/readers.py` with `read_source` supporting Parquet, CSV, JSON/NDJSON, and Excel (`.xlsx`, `.xls`).
+  - Created `src/datapulse/ingestion/__init__.py` exporting `SourceInfo`, `read_source`.
+  - Updated `DatasetProfiler` to read files using `read_source`, enabling multi-format profiling.
+  - Updated `src/datapulse/config.py` and `src/datapulse/api.py` to support format-specific options (e.g. `sheet_name`, `separator`).
+  - Added comprehensive test suite `tests/ingestion/test_readers.py` covering all formats, custom separators, error conditions (missing, empty, unsupported extension), and local real CSV fixture validation.
+  - Added multi-format tests to `tests/test_api.py`.
+- **Validation:**
+  - `uv run pytest`: 26 passed in 0.37s.
+  - `uv run ruff check .`: 0 errors.
+  - `uv run pyright`: 0 errors.
+
 ## Next Exact Action
-- Start **DP-3: Ingestion and schema inspection** (Parquet, CSV, JSON, Excel).
+- Review and merge `dp-3-ingestion` into `main`, then start **DP-4: Column classification**.
 
 ## Do Not Do Yet
 - Do not hard-code taxi-specific business rules into generic profiler logic.
 - Do not build custom exception hierarchies.
 - Do not commit raw datasets into git.
+
