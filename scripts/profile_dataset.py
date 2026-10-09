@@ -1,19 +1,49 @@
 import argparse
+from pathlib import Path
 
-from datapulse.profiling.profiler import DatasetProfiler
-from datapulse.reporting.terminal import display_profile
+from datapulse.api import analyze
+from datapulse.config import AnalysisConfig
+from datapulse.reporting.terminal import display_report
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser(description="Profile a local Parquet dataset.")
+    parser = argparse.ArgumentParser(description="Profile a dataset with DataPulse.")
+    parser.add_argument("file_path", help="Path to dataset file.")
     parser.add_argument(
-        "file_path",
-        help="Path to the Parquet file.",
+        "--sample",
+        type=int,
+        default=None,
+        help="Sample size (rows).",
+    )
+    parser.add_argument(
+        "--format",
+        choices=["terminal", "html", "json"],
+        default="terminal",
+        help="Report output format.",
+    )
+    parser.add_argument(
+        "--output",
+        type=str,
+        default=None,
+        help="Path to save report output.",
     )
 
     args = parser.parse_args()
-    profiler = DatasetProfiler(args.file_path)
-    display_profile(profiler)
+    config = AnalysisConfig(sample_size=args.sample) if args.sample else None
+    report = analyze(args.file_path, config=config)
+
+    if args.format == "terminal":
+        display_report(report)
+    elif args.format == "html":
+        out = Path(args.output) if args.output else Path("report.html")
+        report.save_html(out)
+        print(f"Report saved to {out}")
+    elif args.format == "json":
+        if args.output:
+            report.save_json(args.output)
+            print(f"JSON saved to {args.output}")
+        else:
+            print(report.to_json())
 
 
 if __name__ == "__main__":

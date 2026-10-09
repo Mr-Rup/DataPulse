@@ -12,11 +12,16 @@ def display_report(report: AnalysisReport) -> None:
     """Display an AnalysisReport in the terminal."""
 
     summary = report.summary
+    sample_info = (
+        f" (Sampled: {report.metadata.sample_size:,})"
+        if report.metadata.sample_size
+        else ""
+    )
     console.print(
         Panel(
             f"[bold]File:[/bold] {summary.file_name}\n"
             f"[bold]Size:[/bold] {summary.file_size_mb} MB\n"
-            f"[bold]Rows:[/bold] {summary.row_count:,}\n"
+            f"[bold]Rows:[/bold] {summary.row_count:,}{sample_info}\n"
             f"[bold]Columns:[/bold] {summary.column_count}\n"
             f"[bold]Elapsed:[/bold] {report.metadata.elapsed_seconds:.4f}s",
             title="DataPulse | Dataset Overview",

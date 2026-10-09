@@ -2,9 +2,9 @@
 
 ## Current State
 - **Project:** DataPulse
-- **Phase:** DP-9 — CLI and configuration
-- **Last Completed Milestone:** Full Typer CLI (`analyze`, `profile`, `version`), configuration loader (.json, .toml), and sampling/correlation CLI controls
-- **Branch:** `dp-9-cli-config`
+- **Phase:** DP-10 — Performance, sampling, and scale validation
+- **Last Completed Milestone:** Full scale benchmark on 3.475M row TLC parquet (3.78s execution, ~1.2M rows/s sampled throughput), configuration validation, and scale test suite
+- **Branch:** `dp-10-performance-scale`
 
 ## Phase History
 
@@ -173,13 +173,32 @@
   - `uv run pyright`: 0 errors.
   - Smoke tests: verified CLI execution on `taxi_zone_lookup.csv` with sampling and terminal formatting.
 
+### DP-10: Performance, sampling, and scale validation
+- **Status:** Completed
+- **Changes:**
+  - Validated and benchmarked performance against the official NYC TLC dataset (`yellow_tripdata_2025-01.parquet`, 3,475,226 rows, 20 columns):
+    - Full 3.475M row end-to-end profiling completes in 3.78s (~920,000 rows/second).
+    - Sampled 1M rows completes in 0.956s (~1,045,000 rows/second).
+    - Sampled 100k rows completes in 0.084s (~1,195,000 rows/second).
+    - Sampled 10k rows completes in 0.031s (~321,000 rows/second).
+  - Added `sample_size` reporting into `ReportMetadata` and indicators into both terminal overview panel and HTML report header badges.
+  - Added configuration validation `__post_init__` to `AnalysisConfig` with clear, standard `ValueError` checks.
+  - Created automated benchmark utility in `scripts/benchmark_datapulse.py` with formatted Rich performance tables.
+  - Updated `scripts/profile_dataset.py` to leverage the unified `analyze()` engine with `--sample` and format flags.
+  - Created unit test suite `tests/profiling/test_sampling_scale.py` covering head sampling, reproducible random sampling, row boundary conditions, metadata tracking, config validation, and execution budgets.
+- **Validation:**
+  - `uv run pytest`: 85 passed in 0.76s.
+  - `uv run ruff check .`: 0 errors.
+  - `uv run pyright`: 0 errors.
+
 ## Next Exact Action
-- Start **DP-10: Performance, sampling, and scale validation**.
+- Start **DP-11: Release candidate, documentation polish, and packaging**.
 
 ## Do Not Do Yet
 - Do not hard-code taxi-specific business rules into generic profiler logic.
 - Do not build custom exception hierarchies.
 - Do not commit raw datasets into git.
+
 
 
 

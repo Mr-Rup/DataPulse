@@ -17,6 +17,18 @@ class AnalysisConfig:
     sheet_name: str | None = None
     separator: str | None = None
 
+    def __post_init__(self) -> None:
+        if self.sample_size is not None and self.sample_size <= 0:
+            raise ValueError("sample_size must be greater than 0")
+        if self.sample_method not in ("head", "random"):
+            raise ValueError("sample_method must be either 'head' or 'random'")
+        if self.max_categories <= 0:
+            raise ValueError("max_categories must be greater than 0")
+        if self.correlation_method not in ("pearson", "spearman"):
+            raise ValueError("correlation_method must be 'pearson' or 'spearman'")
+        if not (0.0 <= self.min_correlation <= 1.0):
+            raise ValueError("min_correlation must be between 0.0 and 1.0")
+
 
 def load_config(config_path: str | Path) -> AnalysisConfig:
     """Load configuration from a JSON or TOML file."""

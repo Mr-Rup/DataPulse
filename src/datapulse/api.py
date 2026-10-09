@@ -114,6 +114,7 @@ def analyze(
         source_path=str(path.resolve()),
         file_size_mb=summary.file_size_mb,
         elapsed_seconds=elapsed,
+        sample_size=config.sample_size if config else None,
     )
 
     compute_corr = config.compute_correlations if config else True

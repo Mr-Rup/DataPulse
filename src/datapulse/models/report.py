@@ -14,6 +14,7 @@ class ReportMetadata:
     source_path: str
     file_size_mb: float
     elapsed_seconds: float
+    sample_size: int | None = None
 
 
 @dataclass
