@@ -1,5 +1,6 @@
 import json
 from dataclasses import asdict, dataclass, field
+from pathlib import Path
 from typing import Any
 
 
@@ -117,3 +118,17 @@ class AnalysisReport:
         """Serialize the report to a JSON string."""
 
         return json.dumps(self.to_dict(), indent=indent)
+
+    def save_json(self, output_path: str | Path, indent: int = 2) -> Path:
+        """Save report to a JSON file."""
+
+        from datapulse.reporting.json_exporter import export_json
+
+        return export_json(self, output_path, indent=indent)
+
+    def save_html(self, output_path: str | Path) -> Path:
+        """Save report to a self-contained HTML file."""
+
+        from datapulse.reporting.html import export_html
+
+        return export_html(self, output_path)

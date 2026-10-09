@@ -2,9 +2,9 @@
 
 ## Current State
 - **Project:** DataPulse
-- **Phase:** DP-7 — Relationship and correlation analysis
-- **Last Completed Milestone:** Correlation matrices, key candidate detection, and collinearity alerts implemented
-- **Branch:** `dp-7-relationships`
+- **Phase:** DP-8 — Multi-format reporting (Terminal, JSON, HTML)
+- **Last Completed Milestone:** Self-contained HTML report with responsive styling and search, JSON exporter, and report save methods
+- **Branch:** `dp-8-multi-format-reporting`
 
 ## Phase History
 
@@ -141,11 +141,26 @@
   - `uv run pyright`: 0 errors.
   - Smoke tests: verified on real datasets (`taxi_zone_lookup.csv` accurately identified `LocationID` as primary key candidate).
 
+### DP-8: Multi-format reporting (Terminal, JSON, HTML)
+- **Status:** Completed
+- **Changes:**
+  - Implemented standalone JSON exporter in `src/datapulse/reporting/json_exporter.py` with `export_json()`.
+  - Implemented modern, self-contained HTML report generator in `src/datapulse/reporting/html.py` with `generate_html_report()` and `export_html()`.
+  - HTML report features zero external CDN dependencies, dark modern aesthetic, responsive metric cards, badges, interactive column search filter, data quality alerts, key candidates, and correlation tables.
+  - Added `save_html()` and `save_json()` helper methods to `AnalysisReport` in `src/datapulse/models/report.py`.
+  - Exported `generate_html_report`, `export_html`, and `export_json` in `src/datapulse/reporting/__init__.py` and root package `src/datapulse/__init__.py`.
+  - Added unit test suite in `tests/reporting/test_html_report.py` covering HTML generation, file saving, search script inclusion, and JSON export.
+- **Validation:**
+  - `uv run pytest`: 64 passed in 0.49s.
+  - `uv run ruff check .`: 0 errors.
+  - `uv run pyright`: 0 errors.
+
 ## Next Exact Action
-- Start **DP-8: Multi-format reporting (Terminal, JSON, HTML)**.
+- Start **DP-9: CLI and configuration**.
 
 ## Do Not Do Yet
 - Do not hard-code taxi-specific business rules into generic profiler logic.
 - Do not build custom exception hierarchies.
 - Do not commit raw datasets into git.
+
 
