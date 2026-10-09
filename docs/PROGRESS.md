@@ -2,9 +2,9 @@
 
 ## Current State
 - **Project:** DataPulse
-- **Phase:** DP-8 — Multi-format reporting (Terminal, JSON, HTML)
-- **Last Completed Milestone:** Self-contained HTML report with responsive styling and search, JSON exporter, and report save methods
-- **Branch:** `dp-8-multi-format-reporting`
+- **Phase:** DP-9 — CLI and configuration
+- **Last Completed Milestone:** Full Typer CLI (`analyze`, `profile`, `version`), configuration loader (.json, .toml), and sampling/correlation CLI controls
+- **Branch:** `dp-9-cli-config`
 
 ## Phase History
 
@@ -155,12 +155,31 @@
   - `uv run ruff check .`: 0 errors.
   - `uv run pyright`: 0 errors.
 
+### DP-9: CLI and configuration
+- **Status:** Completed
+- **Changes:**
+  - Implemented full Typer CLI in `src/datapulse/cli/app.py`:
+    - Commands: `datapulse analyze <file>`, `datapulse profile <file>`, `datapulse version`.
+    - Flags: `--format, -f` (`terminal`, `html`, `json`), `--output, -o`, `--config, -c`, `--sample, -s`, `--sample-method`, `--max-categories`, `--correlations/--no-correlations`, `--quiet, -q`, `--sheet-name`, `--separator`.
+    - Handles format routing: terminal table preview, HTML standalone generation, direct JSON stdout streaming or file export.
+  - Expanded `AnalysisConfig` in `src/datapulse/config.py` with sampling method, correlation toggles, and thresholds.
+  - Implemented `load_config()` supporting JSON and TOML formats with top-level or `[datapulse]` nested sections.
+  - Updated `DatasetProfiler` with lazy sampling (`limit()` for head, `sample()` for random) to avoid loading full datasets into memory when sampled.
+  - Exported `load_config` in `src/datapulse/__init__.py`.
+  - Created test suite `tests/cli/test_app.py` covering help, version, format options, file export, sampling, configuration overrides, and error exits.
+- **Validation:**
+  - `uv run pytest`: 78 passed in 0.66s.
+  - `uv run ruff check .`: 0 errors.
+  - `uv run pyright`: 0 errors.
+  - Smoke tests: verified CLI execution on `taxi_zone_lookup.csv` with sampling and terminal formatting.
+
 ## Next Exact Action
-- Start **DP-9: CLI and configuration**.
+- Start **DP-10: Performance, sampling, and scale validation**.
 
 ## Do Not Do Yet
 - Do not hard-code taxi-specific business rules into generic profiler logic.
 - Do not build custom exception hierarchies.
 - Do not commit raw datasets into git.
+
 
 

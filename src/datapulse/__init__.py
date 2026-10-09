@@ -3,7 +3,7 @@
 __version__ = "0.1.0"
 
 from datapulse.api import analyze
-from datapulse.config import AnalysisConfig
+from datapulse.config import AnalysisConfig, load_config
 from datapulse.models.report import AnalysisReport
 from datapulse.reporting import export_html, export_json
 
@@ -13,5 +13,6 @@ __all__ = [
     "analyze",
     "export_html",
     "export_json",
+    "load_config",
     "__version__",
 ]

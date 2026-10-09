@@ -16,6 +16,8 @@ class DatasetProfiler:
         *,
         sheet_name: str | None = None,
         separator: str | None = None,
+        sample_size: int | None = None,
+        sample_method: str = "head",
     ) -> None:
         self.file_path = Path(file_path)
         self.lazy_data, self.source_info = read_source(
@@ -23,7 +25,17 @@ class DatasetProfiler:
             sheet_name=sheet_name,
             separator=separator,
         )
-        self.data = self.lazy_data.collect()
+        if sample_size is not None and sample_size > 0:
+            if sample_method == "random":
+                full_df = self.lazy_data.collect()
+                if full_df.height > sample_size:
+                    self.data = full_df.sample(n=sample_size, seed=42)
+                else:
+                    self.data = full_df
+            else:
+                self.data = self.lazy_data.limit(sample_size).collect()
+        else:
+            self.data = self.lazy_data.collect()
 
     def get_overview(self) -> dict:
         """Return basic dataset metadata."""

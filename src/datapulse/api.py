@@ -35,6 +35,8 @@ def analyze(
         path,
         sheet_name=config.sheet_name if config else None,
         separator=config.separator if config else None,
+        sample_size=config.sample_size if config else None,
+        sample_method=config.sample_method if config else "head",
     )
 
     overview = profiler.get_overview()
@@ -114,8 +116,21 @@ def analyze(
         elapsed_seconds=elapsed,
     )
 
-    numeric_col_names = [c.name for c in columns if c.inferred_role == "numeric"]
-    correlations = compute_correlations(profiler.data, numeric_col_names)
+    compute_corr = config.compute_correlations if config else True
+    if compute_corr:
+        corr_method = config.correlation_method if config else "pearson"
+        min_threshold = config.min_correlation if config else 0.50
+        method_literal = "spearman" if corr_method == "spearman" else "pearson"
+        numeric_col_names = [c.name for c in columns if c.inferred_role == "numeric"]
+        correlations = compute_correlations(
+            profiler.data,
+            numeric_col_names,
+            method=method_literal,
+            min_threshold=min_threshold,
+        )
+    else:
+        correlations = []
+
     key_candidates = find_key_candidates(columns, summary.row_count)
 
     findings = evaluate_quality_rules(columns, duplicates, df=profiler.data)
