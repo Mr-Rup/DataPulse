@@ -9,7 +9,7 @@
 ## Phase History
 
 ### DP-0: Baseline and repository stabilization
-- **Status:** In Progress
+- **Status:** Completed
 - **Changes:**
   - Resolved import ordering lint issue in `scripts/inspect_taxi_data.py`.
   - Updated `pyproject.toml` to focus description on automated tabular EDA.
@@ -23,7 +23,7 @@
   - `uv run pyright`: 0 errors.
 
 ## Next Exact Action
-- Review and merge `dp-0-baseline` into `main`, then start **DP-1: Real-data validation** (implement `scripts/download_tlc.py`).
+- Create branch `dp-1-real-data-validation` and implement `scripts/download_tlc.py` to fetch TLC data and the lookup CSV.
 
 ## Do Not Do Yet
 - Do not build custom exception hierarchies.
