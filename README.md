@@ -1,24 +1,21 @@
 
 # DataPulse
 
-A local-first data profiling and analytical benchmarking toolkit
+A local-first, automated exploratory data analysis (EDA) toolkit for tabular datasets,
 built with modern Python data technologies.
 
 ## Goals
 
-- Profile datasets using Polars.
-- Compare Pandas, Polars eager, Polars lazy, and DuckDB.
-- Evaluate performance across real-world datasets.
-- Produce reproducible benchmark reports.
+- Automated first-pass profiling of tabular datasets using Polars.
+- Schema inspection, missingness analysis, and cardinality breakdown.
+- Column-aware descriptive statistics and data-quality findings.
+- Clean terminal summaries and standalone exportable reports.
 
 ## Technology Stack
 
-- Python
+- Python 3.14+
 - uv
 - Polars
-- DuckDB
-- Apache Arrow
-- Parquet
 - Typer
 - Rich
 - pytest

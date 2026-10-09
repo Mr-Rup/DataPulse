@@ -24,6 +24,8 @@ data/raw/*
 data/prepared/*
 benchmarks/datasets/*
 benchmarks/results/*
+reports/
+*.html
 
 # Keep directory placeholders
 !data/raw/.gitkeep

@@ -3,7 +3,6 @@ from pathlib import Path
 
 import polars as pl
 
-
 file_path = Path("data/raw/yellow_tripdata_2025-01.parquet")
 data = pl.scan_parquet(file_path)
 
