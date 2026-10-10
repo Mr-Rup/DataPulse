@@ -12,6 +12,7 @@ requires-python = ">=3.14,<3.15"
 dependencies = [
     "fastexcel",
     "polars",
+    "pydantic>=2.0",
     "rich",
     "typer",
 ]

@@ -1,33 +1,57 @@
 import json
 import tomllib
-from dataclasses import dataclass
 from pathlib import Path
+from typing import Literal
+
+from pydantic import BaseModel, ConfigDict, Field
 
 
-@dataclass
-class AnalysisConfig:
+class AnalysisConfig(BaseModel):
     """Configuration settings for dataset profiling."""
 
-    max_categories: int = 20
-    sample_size: int | None = None
-    sample_method: str = "head"
-    compute_correlations: bool = True
-    correlation_method: str = "pearson"
-    min_correlation: float = 0.50
-    sheet_name: str | None = None
-    separator: str | None = None
+    model_config = ConfigDict(extra="forbid", validate_assignment=True)
 
-    def __post_init__(self) -> None:
-        if self.sample_size is not None and self.sample_size <= 0:
-            raise ValueError("sample_size must be greater than 0")
-        if self.sample_method not in ("head", "random"):
-            raise ValueError("sample_method must be either 'head' or 'random'")
-        if self.max_categories <= 0:
-            raise ValueError("max_categories must be greater than 0")
-        if self.correlation_method not in ("pearson", "spearman"):
-            raise ValueError("correlation_method must be 'pearson' or 'spearman'")
-        if not (0.0 <= self.min_correlation <= 1.0):
-            raise ValueError("min_correlation must be between 0.0 and 1.0")
+    max_categories: int = Field(
+        default=20,
+        gt=0,
+        description="Max top categories to profile in detail per column",
+    )
+    compute_correlations: bool = Field(
+        default=True,
+        description="Enable or disable pairwise correlation calculations",
+    )
+    correlation_method: Literal["pearson", "spearman"] = Field(
+        default="pearson",
+        description="Correlation calculation method",
+    )
+    min_correlation: float = Field(
+        default=0.50,
+        ge=0.0,
+        le=1.0,
+        description="Minimum absolute correlation threshold to record",
+    )
+    missing_sentinels: list[str] = Field(
+        default_factory=lambda: [
+            "NA",
+            "N/A",
+            "null",
+            "NULL",
+            "none",
+            "NONE",
+            "-999",
+            "NaN",
+            "nan",
+        ],
+        description="String values treated as missing data in text columns",
+    )
+    sheet_name: str | None = Field(
+        default=None,
+        description="Sheet name to read when profiling Excel files",
+    )
+    separator: str | None = Field(
+        default=None,
+        description="Delimiter character for CSV files",
+    )
 
 
 def load_config(config_path: str | Path) -> AnalysisConfig:
@@ -54,15 +78,4 @@ def load_config(config_path: str | Path) -> AnalysisConfig:
     if "datapulse" in data and isinstance(data["datapulse"], dict):
         data = data["datapulse"]
 
-    valid_keys = {
-        "max_categories",
-        "sample_size",
-        "sample_method",
-        "compute_correlations",
-        "correlation_method",
-        "min_correlation",
-        "sheet_name",
-        "separator",
-    }
-    filtered = {k: v for k, v in data.items() if k in valid_keys}
-    return AnalysisConfig(**filtered)
+    return AnalysisConfig.model_validate(data)

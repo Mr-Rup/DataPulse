@@ -56,10 +56,10 @@ def check_missingness(columns: list[ColumnProfile]) -> list[Finding]:
                     title="Severe missingness",
                     description=(
                         f"Column '{col.name}' has {col.missing_percentage:.1f}% "
-                        f"missing values ({col.null_count:,} nulls)."
+                        f"missing values ({col.total_missing_count:,} missing)."
                     ),
                     affected_columns=[col.name],
-                    affected_rows=col.null_count,
+                    affected_rows=col.total_missing_count,
                     affected_percentage=col.missing_percentage,
                 )
             )
@@ -71,10 +71,10 @@ def check_missingness(columns: list[ColumnProfile]) -> list[Finding]:
                     title="Moderate missingness",
                     description=(
                         f"Column '{col.name}' has {col.missing_percentage:.1f}% "
-                        f"missing values ({col.null_count:,} nulls)."
+                        f"missing values ({col.total_missing_count:,} missing)."
                     ),
                     affected_columns=[col.name],
-                    affected_rows=col.null_count,
+                    affected_rows=col.total_missing_count,
                     affected_percentage=col.missing_percentage,
                 )
             )

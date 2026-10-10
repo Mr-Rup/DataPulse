@@ -12,16 +12,11 @@ def display_report(report: AnalysisReport) -> None:
     """Display an AnalysisReport in the terminal."""
 
     summary = report.summary
-    sample_info = (
-        f" (Sampled: {report.metadata.sample_size:,})"
-        if report.metadata.sample_size
-        else ""
-    )
     console.print(
         Panel(
             f"[bold]File:[/bold] {summary.file_name}\n"
             f"[bold]Size:[/bold] {summary.file_size_mb} MB\n"
-            f"[bold]Rows:[/bold] {summary.row_count:,}{sample_info}\n"
+            f"[bold]Rows:[/bold] {summary.row_count:,}\n"
             f"[bold]Columns:[/bold] {summary.column_count}\n"
             f"[bold]Elapsed:[/bold] {report.metadata.elapsed_seconds:.4f}s",
             title="DataPulse | Dataset Overview",
@@ -37,17 +32,22 @@ def display_report(report: AnalysisReport) -> None:
 
     console.print(schema_table)
 
-    missing_table = Table(title="Missing Values")
+    missing_table = Table(title="Missing Values & Data Gaps")
     missing_table.add_column("Column")
-    missing_table.add_column("Null Count", justify="right")
-    missing_table.add_column("Non-Missing", justify="right")
+    missing_table.add_column("Nulls", justify="right")
+    missing_table.add_column("NaNs", justify="right")
+    missing_table.add_column("Empty/Sentinels", justify="right")
+    missing_table.add_column("Total Missing", justify="right")
     missing_table.add_column("Missing %", justify="right")
 
     for item in report.missing_values:
+        empty_sentinels = item.empty_count + item.sentinel_count
         missing_table.add_row(
             item.column,
             f"{item.null_count:,}",
-            f"{item.non_missing_count:,}",
+            f"{item.nan_count:,}",
+            f"{empty_sentinels:,}",
+            f"{item.total_missing_count:,}",
             f"{item.missing_percentage:.2f}%",
         )
 
@@ -69,7 +69,7 @@ def display_report(report: AnalysisReport) -> None:
     quality_table.add_column("Column")
     quality_table.add_column("Type")
     quality_table.add_column("Role")
-    quality_table.add_column("Nulls", justify="right")
+    quality_table.add_column("Missing", justify="right")
     quality_table.add_column("Missing %", justify="right")
     quality_table.add_column("Distinct", justify="right")
 
@@ -78,7 +78,7 @@ def display_report(report: AnalysisReport) -> None:
             col.name,
             col.physical_type,
             col.inferred_role,
-            f"{col.null_count:,}",
+            f"{col.total_missing_count:,}",
             f"{col.missing_percentage:.2f}%",
             f"{col.unique_count:,}",
         )

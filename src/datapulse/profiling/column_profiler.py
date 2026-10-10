@@ -13,19 +13,25 @@ def profile_column(
     total_rows: int,
     role: str,
     max_categories: int = 20,
+    sentinels: list[str] | None = None,
 ) -> dict[str, object]:
     """Calculate role-specific statistics for a single column."""
 
     if role == "numeric":
         return profile_numeric(series, total_rows)
     if role == "categorical":
-        return profile_categorical(series, total_rows, max_categories=max_categories)
+        return profile_categorical(
+            series,
+            total_rows,
+            max_categories=max_categories,
+            sentinels=sentinels,
+        )
     if role == "temporal":
         return profile_temporal(series, total_rows)
     if role == "boolean":
         return profile_boolean(series, total_rows)
     if role == "text":
-        return profile_text(series, total_rows)
+        return profile_text(series, total_rows, sentinels=sentinels)
     if role == "identifier":
         return profile_identifier(series, total_rows)
     if role == "constant":

@@ -2,6 +2,7 @@ import json
 from pathlib import Path
 
 import pytest
+from pydantic import ValidationError
 from typer.testing import CliRunner
 
 from datapulse import __version__
@@ -86,21 +87,11 @@ def test_cli_analyze_json_file(sample_csv: Path, tmp_path: Path):
     assert parsed["summary"]["row_count"] == 5
 
 
-def test_cli_analyze_sampling(sample_csv: Path):
-    result = runner.invoke(
-        app,
-        ["analyze", str(sample_csv), "--sample", "2", "--format", "json"],
-    )
-    assert result.exit_code == 0
-    parsed = json.loads(result.stdout)
-    assert parsed["summary"]["row_count"] == 2
-
-
 def test_cli_analyze_with_config(sample_csv: Path, tmp_path: Path):
     cfg_file = tmp_path / "config.toml"
     cfg_file.write_text(
         "[datapulse]\n"
-        "sample_size = 3\n"
+        "max_categories = 5\n"
         "compute_correlations = false\n",
         encoding="utf-8",
     )
@@ -117,7 +108,7 @@ def test_cli_analyze_with_config(sample_csv: Path, tmp_path: Path):
     )
     assert result.exit_code == 0
     parsed = json.loads(result.stdout)
-    assert parsed["summary"]["row_count"] == 3
+    assert parsed["summary"]["row_count"] == 5
     assert len(parsed["correlations"]) == 0
 
 
@@ -148,12 +139,22 @@ def test_load_config_json(tmp_path: Path):
 def test_load_config_toml(tmp_path: Path):
     toml_path = tmp_path / "conf.toml"
     toml_path.write_text(
-        "sample_size = 100\nsample_method = 'random'\n",
+        "max_categories = 10\ncompute_correlations = false\n",
         encoding="utf-8",
     )
     cfg = load_config(toml_path)
-    assert cfg.sample_size == 100
-    assert cfg.sample_method == "random"
+    assert cfg.max_categories == 10
+    assert cfg.compute_correlations is False
+
+
+def test_load_config_forbids_extra_keys(tmp_path: Path):
+    json_path = tmp_path / "typo_conf.json"
+    json_path.write_text(
+        json.dumps({"max_catgories": 10}),
+        encoding="utf-8",
+    )
+    with pytest.raises(ValidationError):
+        load_config(json_path)
 
 
 def test_load_config_missing_file():

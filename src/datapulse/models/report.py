@@ -14,7 +14,6 @@ class ReportMetadata:
     source_path: str
     file_size_mb: float
     elapsed_seconds: float
-    sample_size: int | None = None
 
 
 @dataclass
@@ -44,8 +43,12 @@ class MissingSummary:
 
     column: str
     null_count: int
-    non_missing_count: int
-    missing_percentage: float
+    nan_count: int = 0
+    empty_count: int = 0
+    sentinel_count: int = 0
+    total_missing_count: int = 0
+    non_missing_count: int = 0
+    missing_percentage: float = 0.0
 
 
 @dataclass
@@ -58,6 +61,9 @@ class ColumnProfile:
     confidence: float = 1.0
     inference_reason: str = ""
     null_count: int = 0
+    nan_count: int = 0
+    empty_count: int = 0
+    total_missing_count: int = 0
     missing_percentage: float = 0.0
     unique_count: int = 0
     statistics: dict[str, Any] = field(default_factory=dict)

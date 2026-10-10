@@ -35,14 +35,14 @@ def analyze(
         path,
         sheet_name=config.sheet_name if config else None,
         separator=config.separator if config else None,
-        sample_size=config.sample_size if config else None,
-        sample_method=config.sample_method if config else "head",
     )
 
+    sentinels = config.missing_sentinels if config else None
+
     overview = profiler.get_overview()
-    missing_df = profiler.get_missing_values()
+    missing_df = profiler.get_missing_values(sentinels=sentinels)
     duplicate_dict = profiler.get_duplicate_summary()
-    quality_df = profiler.get_column_quality()
+    quality_df = profiler.get_column_quality(sentinels=sentinels)
 
     summary = DatasetSummary(
         file_name=overview["file_name"],
@@ -61,8 +61,12 @@ def analyze(
 
     missing_values = [
         MissingSummary(
-            column=row["column"],
+            column=str(row["column"]),
             null_count=int(row["null_count"]),
+            nan_count=int(row["nan_count"]),
+            empty_count=int(row["empty_count"]),
+            sentinel_count=int(row["sentinel_count"]),
+            total_missing_count=int(row["total_missing_count"]),
             non_missing_count=int(row["non_missing_count"]),
             missing_percentage=float(row["missing_percentage"]),
         )
@@ -81,7 +85,7 @@ def analyze(
         role = (
             classification.inferred_role
             if classification
-            else q_info.get("category", "unknown")
+            else str(q_info.get("category", "unknown"))
         )
         conf = classification.confidence if classification else 1.0
         reason = classification.reason if classification else ""
@@ -90,6 +94,7 @@ def analyze(
             col_name,
             role=role,
             max_categories=max_categories,
+            sentinels=sentinels,
         )
 
         profile = ColumnProfile(
@@ -99,6 +104,9 @@ def analyze(
             confidence=conf,
             inference_reason=reason,
             null_count=int(q_info.get("null_count", 0)),
+            nan_count=int(q_info.get("nan_count", 0)),
+            empty_count=int(q_info.get("empty_count", 0)),
+            total_missing_count=int(q_info.get("total_missing_count", 0)),
             missing_percentage=float(q_info.get("missing_percentage", 0.0)),
             unique_count=int(q_info.get("unique_count", 0)),
             statistics=stats,
@@ -114,7 +122,6 @@ def analyze(
         source_path=str(path.resolve()),
         file_size_mb=summary.file_size_mb,
         elapsed_seconds=elapsed,
-        sample_size=config.sample_size if config else None,
     )
 
     compute_corr = config.compute_correlations if config else True

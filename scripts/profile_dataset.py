@@ -2,19 +2,12 @@ import argparse
 from pathlib import Path
 
 from datapulse.api import analyze
-from datapulse.config import AnalysisConfig
 from datapulse.reporting.terminal import display_report
 
 
 def main() -> None:
     parser = argparse.ArgumentParser(description="Profile a dataset with DataPulse.")
     parser.add_argument("file_path", help="Path to dataset file.")
-    parser.add_argument(
-        "--sample",
-        type=int,
-        default=None,
-        help="Sample size (rows).",
-    )
     parser.add_argument(
         "--format",
         choices=["terminal", "html", "json"],
@@ -29,8 +22,7 @@ def main() -> None:
     )
 
     args = parser.parse_args()
-    config = AnalysisConfig(sample_size=args.sample) if args.sample else None
-    report = analyze(args.file_path, config=config)
+    report = analyze(args.file_path)
 
     if args.format == "terminal":
         display_report(report)

@@ -1,7 +1,11 @@
 import polars as pl
 
 
-def profile_text(series: pl.Series, total_rows: int) -> dict[str, object]:
+def profile_text(
+    series: pl.Series,
+    total_rows: int,
+    sentinels: list[str] | None = None,
+) -> dict[str, object]:
     """Calculate descriptive statistics for a text column."""
 
     non_null = series.drop_nulls()
@@ -14,6 +18,10 @@ def profile_text(series: pl.Series, total_rows: int) -> dict[str, object]:
             "median_length": 0.0,
             "empty_count": 0,
             "empty_percentage": 0.0,
+            "whitespace_count": 0,
+            "whitespace_percentage": 0.0,
+            "sentinel_count": 0,
+            "effective_missing_count": series.null_count(),
             "unique_count": 0,
             "cardinality_percentage": 0.0,
         }
@@ -26,6 +34,21 @@ def profile_text(series: pl.Series, total_rows: int) -> dict[str, object]:
 
     empty_count = int((non_null == "").sum())
     empty_pct = round((empty_count / total_rows) * 100, 2) if total_rows > 0 else 0.0
+
+    stripped = non_null.str.strip_chars()
+    total_blank = int((stripped == "").sum())
+    whitespace_count = max(0, total_blank - empty_count)
+    whitespace_pct = (
+        round((whitespace_count / total_rows) * 100, 2) if total_rows > 0 else 0.0
+    )
+
+    sentinel_count = 0
+    if sentinels:
+        sentinel_count = int(non_null.is_in(sentinels).sum())
+
+    effective_missing = (
+        series.null_count() + empty_count + whitespace_count + sentinel_count
+    )
 
     unique_count = non_null.n_unique()
     cardinality_pct = (
@@ -40,10 +63,16 @@ def profile_text(series: pl.Series, total_rows: int) -> dict[str, object]:
             round(float(mean_len), 2) if isinstance(mean_len, (int, float)) else 0.0
         ),
         "median_length": (
-            round(float(median_len), 2) if isinstance(median_len, (int, float)) else 0.0
+            round(float(median_len), 2)
+            if isinstance(median_len, (int, float))
+            else 0.0
         ),
         "empty_count": empty_count,
         "empty_percentage": empty_pct,
+        "whitespace_count": whitespace_count,
+        "whitespace_percentage": whitespace_pct,
+        "sentinel_count": sentinel_count,
+        "effective_missing_count": effective_missing,
         "unique_count": unique_count,
         "cardinality_percentage": cardinality_pct,
     }

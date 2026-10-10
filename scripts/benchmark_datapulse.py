@@ -4,7 +4,7 @@ from pathlib import Path
 from rich.console import Console
 from rich.table import Table
 
-from datapulse import AnalysisConfig, analyze
+from datapulse import analyze
 
 console = Console()
 
@@ -23,22 +23,18 @@ def run_benchmark() -> None:
 
     runs = []
     if zone_path.exists():
-        runs.append((zone_path, None, "Full dataset"))
+        runs.append((zone_path, "Taxi Zones Lookup"))
 
     if tlc_path.exists():
-        runs.append((tlc_path, 10_000, "Sampled 10k (head)"))
-        runs.append((tlc_path, 100_000, "Sampled 100k (head)"))
-        runs.append((tlc_path, 1_000_000, "Sampled 1M (head)"))
-        runs.append((tlc_path, None, "Full 3.475M rows"))
+        runs.append((tlc_path, "NYC Yellow Taxi Jan 2025"))
 
     if not runs:
         console.print("[yellow]No raw data found in data/raw/[/yellow]")
         return
 
-    for path, sample_size, label in runs:
-        cfg = AnalysisConfig(sample_size=sample_size) if sample_size else None
+    for path, label in runs:
         start = time.perf_counter()
-        rep = analyze(path, config=cfg)
+        rep = analyze(path)
         elapsed = time.perf_counter() - start
 
         rows = rep.summary.row_count

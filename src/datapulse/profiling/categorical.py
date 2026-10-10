@@ -2,7 +2,10 @@ import polars as pl
 
 
 def profile_categorical(
-    series: pl.Series, total_rows: int, max_categories: int = 10
+    series: pl.Series,
+    total_rows: int,
+    max_categories: int = 10,
+    sentinels: list[str] | None = None,
 ) -> dict[str, object]:
     """Calculate descriptive statistics and top categories for a categorical column."""
 
@@ -14,12 +17,24 @@ def profile_categorical(
             "cardinality_percentage": 0.0,
             "mode": None,
             "top_categories": [],
+            "empty_count": 0,
+            "sentinel_count": 0,
+            "effective_missing_count": series.null_count(),
         }
 
     unique_count = non_null.n_unique()
     cardinality_pct = (
         round((unique_count / total_rows) * 100, 2) if total_rows > 0 else 0.0
     )
+
+    empty_count = 0
+    sentinel_count = 0
+    if non_null.dtype == pl.String:
+        empty_count = int((non_null == "").sum())
+        if sentinels:
+            sentinel_count = int(non_null.is_in(sentinels).sum())
+
+    effective_missing = series.null_count() + empty_count + sentinel_count
 
     vc_df = non_null.value_counts(sort=True).head(max_categories)
     top_categories = []
@@ -45,4 +60,7 @@ def profile_categorical(
         "cardinality_percentage": cardinality_pct,
         "mode": mode_val,
         "top_categories": top_categories,
+        "empty_count": empty_count,
+        "sentinel_count": sentinel_count,
+        "effective_missing_count": effective_missing,
     }

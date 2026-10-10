@@ -16,8 +16,6 @@ class DatasetProfiler:
         *,
         sheet_name: str | None = None,
         separator: str | None = None,
-        sample_size: int | None = None,
-        sample_method: str = "head",
     ) -> None:
         self.file_path = Path(file_path)
         self.lazy_data, self.source_info = read_source(
@@ -25,17 +23,7 @@ class DatasetProfiler:
             sheet_name=sheet_name,
             separator=separator,
         )
-        if sample_size is not None and sample_size > 0:
-            if sample_method == "random":
-                full_df = self.lazy_data.collect()
-                if full_df.height > sample_size:
-                    self.data = full_df.sample(n=sample_size, seed=42)
-                else:
-                    self.data = full_df
-            else:
-                self.data = self.lazy_data.limit(sample_size).collect()
-        else:
-            self.data = self.lazy_data.collect()
+        self.data = self.lazy_data.collect()
 
     def get_overview(self) -> dict:
         """Return basic dataset metadata."""
@@ -51,28 +39,82 @@ class DatasetProfiler:
             },
         }
 
-    def get_missing_values(self) -> pl.DataFrame:
-        """Calculate missing-value counts and percentages."""
+    def get_missing_values(
+        self, sentinels: list[str] | None = None
+    ) -> pl.DataFrame:
+        """Calculate missing-value breakdown including nulls, NaNs,
+        empty strings, and sentinels.
+        """
 
         total_rows = self.data.height
-        null_counts = self.data.null_count()
+        if total_rows == 0:
+            return pl.DataFrame(
+                schema={
+                    "column": pl.String,
+                    "null_count": pl.UInt32,
+                    "nan_count": pl.UInt32,
+                    "empty_count": pl.UInt32,
+                    "sentinel_count": pl.UInt32,
+                    "total_missing_count": pl.UInt32,
+                    "non_missing_count": pl.UInt64,
+                    "missing_percentage": pl.Float64,
+                }
+            )
+
+        # Build batched aggregate expressions for a single parallel pass
+        exprs: list[pl.Expr] = []
+        for col in self.data.columns:
+            dtype = self.data.schema[col]
+            exprs.append(pl.col(col).null_count().alias(f"null__{col}"))
+            if dtype.is_float():
+                exprs.append(pl.col(col).is_nan().sum().alias(f"nan__{col}"))
+            if dtype == pl.String:
+                exprs.append(
+                    (pl.col(col).str.strip_chars() == "")
+                    .sum()
+                    .alias(f"empty__{col}")
+                )
+                if sentinels:
+                    exprs.append(
+                        pl.col(col).is_in(sentinels).sum().alias(f"sentinel__{col}")
+                    )
+
+        agg_result = self.data.select(exprs).to_dicts()[0]
 
         missing_summary = []
-
-        for column in self.data.columns:
-            null_count = null_counts[column][0]
-            non_missing_count = total_rows - null_count
-
-            missing_percentage = (
-                (null_count / total_rows) * 100 if total_rows > 0 else 0.0
+        for col in self.data.columns:
+            dtype = self.data.schema[col]
+            null_count = int(agg_result.get(f"null__{col}", 0) or 0)
+            nan_count = (
+                int(agg_result.get(f"nan__{col}", 0) or 0)
+                if dtype.is_float()
+                else 0
             )
+            empty_count = (
+                int(agg_result.get(f"empty__{col}", 0) or 0)
+                if dtype == pl.String
+                else 0
+            )
+            sentinel_count = (
+                int(agg_result.get(f"sentinel__{col}", 0) or 0)
+                if (dtype == pl.String and sentinels)
+                else 0
+            )
+
+            total_missing = null_count + nan_count + empty_count + sentinel_count
+            non_missing = max(0, total_rows - total_missing)
+            missing_pct = (total_missing / total_rows) * 100.0
 
             missing_summary.append(
                 {
-                    "column": column,
+                    "column": col,
                     "null_count": null_count,
-                    "non_missing_count": non_missing_count,
-                    "missing_percentage": round(missing_percentage, 2),
+                    "nan_count": nan_count,
+                    "empty_count": empty_count,
+                    "sentinel_count": sentinel_count,
+                    "total_missing_count": total_missing,
+                    "non_missing_count": non_missing,
+                    "missing_percentage": round(missing_pct, 2),
                 }
             )
 
@@ -81,6 +123,10 @@ class DatasetProfiler:
             schema={
                 "column": pl.String,
                 "null_count": pl.UInt32,
+                "nan_count": pl.UInt32,
+                "empty_count": pl.UInt32,
+                "sentinel_count": pl.UInt32,
+                "total_missing_count": pl.UInt32,
                 "non_missing_count": pl.UInt64,
                 "missing_percentage": pl.Float64,
             },
@@ -189,23 +235,30 @@ class DatasetProfiler:
 
         return pl.DataFrame(summaries, schema=schema)
 
-    def get_column_quality(self) -> pl.DataFrame:
+    def get_column_quality(
+        self, sentinels: list[str] | None = None
+    ) -> pl.DataFrame:
         """Summarize column types and basic data-quality metrics."""
+
+        missing_df = self.get_missing_values(sentinels=sentinels)
+        missing_map = {row["column"]: row for row in missing_df.iter_rows(named=True)}
 
         summaries = []
         total_rows = self.data.height
 
         for column, dtype in self.data.schema.items():
             series = self.data[column]
-            null_count = series.null_count()
-            non_null = series.drop_nulls()
+            m_info = missing_map.get(column, {})
+            null_count = int(m_info.get("null_count", 0))
+            nan_count = int(m_info.get("nan_count", 0))
+            empty_count = int(m_info.get("empty_count", 0))
+            sentinel_count = int(m_info.get("sentinel_count", 0))
+            total_missing = int(m_info.get("total_missing_count", 0))
+            missing_pct = float(m_info.get("missing_percentage", 0.0))
 
+            non_null = series.drop_nulls()
             classification = classify_column(series, total_rows)
             category = classification.inferred_role
-
-            missing_percentage = (
-                null_count / total_rows * 100 if total_rows > 0 else 0.0
-            )
 
             summaries.append(
                 {
@@ -213,7 +266,11 @@ class DatasetProfiler:
                     "data_type": str(dtype),
                     "category": category,
                     "null_count": null_count,
-                    "missing_percentage": round(missing_percentage, 2),
+                    "nan_count": nan_count,
+                    "empty_count": empty_count,
+                    "sentinel_count": sentinel_count,
+                    "total_missing_count": total_missing,
+                    "missing_percentage": missing_pct,
                     "unique_count": non_null.n_unique(),
                 }
             )
@@ -225,6 +282,10 @@ class DatasetProfiler:
                 "data_type": pl.String,
                 "category": pl.String,
                 "null_count": pl.UInt32,
+                "nan_count": pl.UInt32,
+                "empty_count": pl.UInt32,
+                "sentinel_count": pl.UInt32,
+                "total_missing_count": pl.UInt32,
                 "missing_percentage": pl.Float64,
                 "unique_count": pl.UInt32,
             },
@@ -235,6 +296,7 @@ class DatasetProfiler:
         column: str,
         role: str | None = None,
         max_categories: int = 20,
+        sentinels: list[str] | None = None,
     ) -> dict[str, object]:
         """Profile a column using role-specific descriptive statistics."""
 
@@ -250,4 +312,5 @@ class DatasetProfiler:
             total_rows,
             role,
             max_categories=max_categories,
+            sentinels=sentinels,
         )

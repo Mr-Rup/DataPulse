@@ -304,7 +304,7 @@ def generate_html_report(report: AnalysisReport) -> str:
         missing_bar = (
             "<div class='progress-wrap'>"
             f"<div class='progress-bar' style='width: {missing_width:.1f}%'></div>"
-            f"<span class='progress-text'>{col.null_count:,} "
+            f"<span class='progress-text'>{col.total_missing_count:,} "
             f"({col.missing_percentage:.1f}%)</span>"
             "</div>"
         )
@@ -388,12 +388,6 @@ def generate_html_report(report: AnalysisReport) -> str:
     version_str = escape(meta.datapulse_version)
     source_str = escape(meta.source_path)
 
-    sample_badge = (
-        f'<span class="badge badge-warning">Sampled: {meta.sample_size:,}</span>'
-        if meta.sample_size
-        else ""
-    )
-
     html = f"""<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -410,7 +404,6 @@ def generate_html_report(report: AnalysisReport) -> str:
                 <span class="file-title">{escape(summary.file_name)}</span>
             </div>
             <div class="meta-badges">
-                {sample_badge}
                 <span class="badge badge-neutral">v{version_str}</span>
                 <span class="badge badge-neutral">{meta.elapsed_seconds:.3f}s</span>
                 <span class="badge badge-neutral">{time_str}</span>

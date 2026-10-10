@@ -80,21 +80,6 @@ def run_analyze(
             readable=True,
         ),
     ] = None,
-    sample: Annotated[
-        int | None,
-        typer.Option(
-            "--sample",
-            "-s",
-            help="Limit analysis to N rows.",
-        ),
-    ] = None,
-    sample_method: Annotated[
-        str | None,
-        typer.Option(
-            "--sample-method",
-            help="Sampling method: 'head' or 'random'.",
-        ),
-    ] = None,
     max_categories: Annotated[
         int | None,
         typer.Option(
@@ -151,18 +136,18 @@ def run_analyze(
         cfg = AnalysisConfig()
 
     # 2. Command-line overrides
-    if sample is not None:
-        cfg.sample_size = sample
-    if sample_method is not None:
-        cfg.sample_method = sample_method
+    overrides: dict[str, object] = {}
     if max_categories is not None:
-        cfg.max_categories = max_categories
+        overrides["max_categories"] = max_categories
     if correlations is not None:
-        cfg.compute_correlations = correlations
+        overrides["compute_correlations"] = correlations
     if sheet_name is not None:
-        cfg.sheet_name = sheet_name
+        overrides["sheet_name"] = sheet_name
     if separator is not None:
-        cfg.separator = separator
+        overrides["separator"] = separator
+
+    if overrides:
+        cfg = cfg.model_copy(update=overrides)
 
     # 3. Execution
     try:
@@ -240,14 +225,6 @@ def run_profile(
             readable=True,
         ),
     ] = None,
-    sample: Annotated[
-        int | None,
-        typer.Option(
-            "--sample",
-            "-s",
-            help="Limit analysis to N rows.",
-        ),
-    ] = None,
     quiet: Annotated[
         bool,
         typer.Option(
@@ -263,7 +240,6 @@ def run_profile(
         format=format,
         output=output,
         config=config,
-        sample=sample,
         quiet=quiet,
     )
 
