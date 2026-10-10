@@ -255,7 +255,7 @@ def check_numeric_outliers(
                             title="Distribution tail values (IQR)",
                             description=(
                                 f"Column '{col.name}' has {outliers:,} observations "
-                                f"({outlier_pct:.2f}%) outside 1.5×IQR bounds "
+                                f"({outlier_pct:.2f}%) outside 1.5x IQR bounds "
                                 f"[{lower_bound:.2f}, {upper_bound:.2f}]. "
                                 "Common in heavy-tailed empirical distributions."
                             ),

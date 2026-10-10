@@ -139,3 +139,80 @@ def test_read_source_real_taxi_zone_lookup():
     assert collected.height == 265
     assert "LocationID" in collected.columns
     assert "Borough" in collected.columns
+
+
+def test_read_source_csv_cr_line_endings(tmp_path):
+    # Classic Mac / legacy CR (\r) line terminators
+    content = b"col_a,col_b,col_c\r1,10.5,foo\r2,20.0,bar\r3,30.5,baz\r"
+    file_path = tmp_path / "cr_ending.csv"
+    file_path.write_bytes(content)
+
+    lf, info = read_source(file_path)
+    assert info.file_format == "csv"
+    collected = lf.collect()
+    assert collected.height == 3
+    assert collected.columns == ["col_a", "col_b", "col_c"]
+
+
+def test_read_source_tsv_auto_detection(tmp_path):
+    tsv_content = "id\tname\tscore\n1\tAlpha\t99.5\n2\tBeta\t88.0\n"
+    file_path = tmp_path / "dataset.tsv"
+    file_path.write_text(tsv_content, encoding="utf-8")
+
+    lf, info = read_source(file_path)
+    assert info.file_format == "csv"
+    collected = lf.collect()
+    assert collected.height == 2
+    assert collected.columns == ["id", "name", "score"]
+
+
+def test_read_source_semicolon_auto_detection(tmp_path):
+    content = "metric;value;flag\na;100;true\nb;200;false\n"
+    file_path = tmp_path / "semicolon_auto.csv"
+    file_path.write_text(content, encoding="utf-8")
+
+    lf, info = read_source(file_path)
+    assert info.file_format == "csv"
+    collected = lf.collect()
+    assert collected.height == 2
+    assert collected.columns == ["metric", "value", "flag"]
+
+
+def test_read_source_pipe_auto_detection(tmp_path):
+    content = "id|city|population\n1|Tokyo|37000000\n2|Delhi|32000000\n"
+    file_path = tmp_path / "pipe_auto.csv"
+    file_path.write_text(content, encoding="utf-8")
+
+    lf, info = read_source(file_path)
+    assert info.file_format == "csv"
+    collected = lf.collect()
+    assert collected.height == 2
+    assert collected.columns == ["id", "city", "population"]
+
+
+def test_read_source_utf8_lossy_fallback(tmp_path):
+    # Latin-1 bytes with invalid UTF-8 sequence: e.g. Café with 0xE9
+    latin1_content = b"id,name\n1,Caf\xe9\n2,Na\xefve\n"
+    file_path = tmp_path / "latin1.csv"
+    file_path.write_bytes(latin1_content)
+
+    lf, info = read_source(file_path)
+    assert info.file_format == "csv"
+    collected = lf.collect()
+    assert collected.height == 2
+    assert collected.columns == ["id", "name"]
+
+
+def test_read_source_boston_housing_cr_if_available():
+    boston_path = Path(r"C:\Users\majum\Downloads\archive\Boston-house-price-data.csv")
+    if not boston_path.exists():
+        pytest.skip("Boston housing dataset not present in downloads")
+
+    lf, info = read_source(boston_path)
+    assert info.file_format == "csv"
+    collected = lf.collect()
+    assert collected.height == 506
+    assert collected.width == 14
+    assert "MEDV" in collected.columns
+    assert "CRIM" in collected.columns
+
