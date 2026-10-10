@@ -1,9 +1,16 @@
+# =========================================================================
+# DataPulse Identifier Column Profiler
+# Key uniqueness metrics, duplicate occurrences, and cardinality ratios.
+# =========================================================================
+
 import polars as pl
 
+# =========================================================================
+# IDENTIFIER PROFILER IMPLEMENTATION
+# =========================================================================
 
 def profile_identifier(series: pl.Series, total_rows: int) -> dict[str, object]:
     """Calculate descriptive statistics for an identifier column."""
-
     non_null = series.drop_nulls()
     if non_null.len() == 0:
         return {

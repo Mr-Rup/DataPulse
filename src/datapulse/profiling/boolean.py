@@ -1,9 +1,16 @@
+# =========================================================================
+# DataPulse Boolean Column Profiler
+# Binary indicators, True/False frequencies, percentages, and proportions.
+# =========================================================================
+
 import polars as pl
 
+# =========================================================================
+# BOOLEAN PROFILER IMPLEMENTATION
+# =========================================================================
 
 def profile_boolean(series: pl.Series, total_rows: int) -> dict[str, object]:
-    """Calculate descriptive statistics for a boolean column."""
-
+    """Calculate descriptive statistics for a boolean or 0/1 indicator column."""
     non_null = series.drop_nulls()
     if non_null.len() == 0:
         return {

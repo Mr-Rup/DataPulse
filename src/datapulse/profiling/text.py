@@ -1,5 +1,14 @@
+# =========================================================================
+# DataPulse Freeform Text Column Profiler
+# Character length distributions (min/max/mean/median), empty strings,
+# whitespace-only strings, and configurable sentinel detections.
+# =========================================================================
+
 import polars as pl
 
+# =========================================================================
+# TEXT PROFILER IMPLEMENTATION
+# =========================================================================
 
 def profile_text(
     series: pl.Series,
@@ -7,7 +16,6 @@ def profile_text(
     sentinels: list[str] | None = None,
 ) -> dict[str, object]:
     """Calculate descriptive statistics for a text column."""
-
     non_null = series.drop_nulls()
     if non_null.len() == 0:
         return {

@@ -1,3 +1,8 @@
+# =========================================================================
+# DataPulse Column Profiler Dispatcher
+# Routes column profile generation to role-specific statistical profilers.
+# =========================================================================
+
 import polars as pl
 
 from datapulse.profiling.boolean import profile_boolean
@@ -7,6 +12,9 @@ from datapulse.profiling.numeric import profile_numeric
 from datapulse.profiling.temporal import profile_temporal
 from datapulse.profiling.text import profile_text
 
+# =========================================================================
+# COLUMN PROFILING DISPATCHER
+# =========================================================================
 
 def profile_column(
     series: pl.Series,
@@ -15,8 +23,7 @@ def profile_column(
     max_categories: int = 20,
     sentinels: list[str] | None = None,
 ) -> dict[str, object]:
-    """Calculate role-specific statistics for a single column."""
-
+    """Calculate role-specific statistics for a single column based on inferred role."""
     if role == "numeric":
         return profile_numeric(series, total_rows)
     if role == "categorical":
@@ -41,5 +48,4 @@ def profile_column(
             "count": non_null.len(),
             "constant_value": val,
         }
-
     return {"count": series.drop_nulls().len()}

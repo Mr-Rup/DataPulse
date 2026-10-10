@@ -1,3 +1,9 @@
+# =========================================================================
+# DataPulse Terminal Report Formatter
+# Rich tables and panels displaying dataset overviews, missingness grids,
+# column statistics, quality findings, correlations, and key candidates.
+# =========================================================================
+
 from rich.console import Console
 from rich.panel import Panel
 from rich.table import Table
@@ -7,6 +13,9 @@ from datapulse.profiling.profiler import DatasetProfiler
 
 console = Console()
 
+# =========================================================================
+# COMPREHENSIVE TERMINAL REPORT FORMATTER
+# =========================================================================
 
 def display_report(report: AnalysisReport) -> None:
     """Display an AnalysisReport in the terminal."""
@@ -340,6 +349,10 @@ def display_report(report: AnalysisReport) -> None:
             )
         console.print(key_table)
 
+
+# =========================================================================
+# TARGET PROFILE DISPATCHER
+# =========================================================================
 
 def display_profile(target: AnalysisReport | DatasetProfiler) -> None:
     """Display profile for an AnalysisReport or DatasetProfiler in the terminal."""

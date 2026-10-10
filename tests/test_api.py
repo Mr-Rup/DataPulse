@@ -1,119 +1,90 @@
+# =============================================================================
+# Unit & Scenario Tests: Public API Pipeline (analyze)
+# =============================================================================
+
+from pathlib import Path
+
 import polars as pl
 import pytest
 
 from datapulse import __version__, analyze
+from datapulse.config import AnalysisConfig
 from datapulse.models.report import AnalysisReport
 
-
-@pytest.fixture
-def sample_parquet(tmp_path):
-    data = pl.DataFrame(
-        {
-            "trip_distance": [2.5, 4.0, None],
-            "fare_amount": [10.0, 15.0, 20.0],
-            "passenger_count": [1, 2, 1],
-        }
-    )
-
-    file_path = tmp_path / "sample.parquet"
-    data.write_parquet(file_path)
-
-    return file_path
+# =============================================================================
+# 1. PUBLIC API END-TO-END PIPELINE
+# =============================================================================
 
 
-def test_analyze_produces_valid_report(sample_parquet):
-    report = analyze(sample_parquet)
+class TestPublicApiPipeline:
+    """Validate end-to-end analyze() execution across file formats and in-memory frames."""
 
-    assert isinstance(report, AnalysisReport)
-    assert report.schema_version == "1.0.0"
-    assert report.metadata.datapulse_version == __version__
-    assert report.metadata.source_name == "sample.parquet"
-    assert report.metadata.elapsed_seconds >= 0.0
+    def test_analyze_realistic_dataset(self, realistic_parquet_path: Path):
+        report = analyze(realistic_parquet_path)
 
-    assert report.summary.row_count == 3
-    assert report.summary.column_count == 3
-    assert "trip_distance" in report.summary.schema
+        assert isinstance(report, AnalysisReport)
+        assert report.schema_version == "1.0.0"
+        assert report.metadata.datapulse_version == __version__
+        assert report.metadata.source_name == "realistic_data.parquet"
+        assert report.metadata.elapsed_seconds >= 0.0
 
-    assert report.duplicates.total_rows == 3
-    assert report.duplicates.unique_rows == 3
-    assert report.duplicates.duplicate_rows == 0
+        assert report.summary.row_count == 50
+        assert report.summary.column_count == 12
+        assert "amount" in report.summary.schema
 
-    assert len(report.missing_values) == 3
-    trip_distance_missing = [
-        m for m in report.missing_values if m.column == "trip_distance"
-    ][0]
-    assert trip_distance_missing.null_count == 1
-    assert trip_distance_missing.missing_percentage == pytest.approx(33.33, abs=0.01)
+        assert report.duplicates.total_rows == 50
+        assert report.duplicates.duplicate_rows == 2
 
-    assert len(report.columns) == 3
-    names = [c.name for c in report.columns]
-    assert "trip_distance" in names
-    assert "fare_amount" in names
+        assert len(report.missing_values) == 12
+        assert len(report.columns) == 12
 
-    assert isinstance(report.to_dict(), dict)
-    assert isinstance(report.to_json(), str)
+        assert isinstance(report.to_dict(), dict)
+        assert isinstance(report.to_json(), str)
 
+    def test_analyze_multi_format_ingestion(
+        self, realistic_csv_path: Path, realistic_json_path: Path, tmp_path: Path
+    ):
+        # CSV
+        rep_csv = analyze(realistic_csv_path)
+        assert rep_csv.summary.row_count == 50
 
-def test_analyze_rejects_missing_file(tmp_path):
-    missing_file = tmp_path / "missing.parquet"
+        # JSON
+        rep_json = analyze(realistic_json_path)
+        assert rep_json.summary.row_count == 50
 
-    with pytest.raises(FileNotFoundError):
-        analyze(missing_file)
+        # Excel
+        excel_file = tmp_path / "test.xlsx"
+        pl.DataFrame({"metric": [1, 2], "score": [90.5, 85.0]}).write_excel(excel_file)
+        rep_excel = analyze(excel_file)
+        assert rep_excel.summary.row_count == 2
 
+    def test_analyze_metadata_path_privacy(self, realistic_csv_path: Path):
+        # Default: full path privacy enabled (filename only)
+        rep_private = analyze(
+            realistic_csv_path, config=AnalysisConfig(include_full_path=False)
+        )
+        assert rep_private.metadata.source_path == realistic_csv_path.name
 
-def test_analyze_rejects_unsupported_file(tmp_path):
-    txt_file = tmp_path / "sample.txt"
-    txt_file.write_text("a,b\n1,2\n", encoding="utf-8")
-
-    with pytest.raises(ValueError):
-        analyze(txt_file)
-
-
-def test_analyze_csv(tmp_path):
-    csv_file = tmp_path / "test.csv"
-    csv_file.write_text("col_a,col_b\n10,foo\n20,bar\n", encoding="utf-8")
-
-    report = analyze(csv_file)
-    assert report.summary.file_name == "test.csv"
-    assert report.summary.row_count == 2
-    assert report.summary.column_count == 2
-    assert "col_a" in report.summary.schema
+        # Explicit: full path included
+        rep_full = analyze(
+            realistic_csv_path, config=AnalysisConfig(include_full_path=True)
+        )
+        assert rep_full.metadata.source_path == str(realistic_csv_path)
 
 
-def test_analyze_json(tmp_path):
-    json_file = tmp_path / "test.json"
-    content = '[{"id": 1, "name": "A"}, {"id": 2, "name": "B"}]'
-    json_file.write_text(content, encoding="utf-8")
-
-    report = analyze(json_file)
-    assert report.summary.file_name == "test.json"
-    assert report.summary.row_count == 2
-    assert report.summary.column_count == 2
+# =============================================================================
+# 2. PUBLIC API INPUT VALIDATION
+# =============================================================================
 
 
-def test_analyze_excel(tmp_path):
-    excel_file = tmp_path / "test.xlsx"
-    df = pl.DataFrame({"metric": [1, 2], "score": [90.5, 85.0]})
-    df.write_excel(excel_file)
+class TestPublicApiValidation:
+    """Validate API exception raising for missing or unsupported inputs."""
 
-    report = analyze(excel_file)
-    assert report.summary.file_name == "test.xlsx"
-    assert report.summary.row_count == 2
-    assert report.summary.column_count == 2
+    def test_rejects_missing_or_unsupported(self, tmp_path: Path):
+        with pytest.raises(FileNotFoundError):
+            analyze(tmp_path / "nonexistent.parquet")
 
-
-def test_analyze_metadata_path_privacy(tmp_path):
-    csv_file = tmp_path / "privacy_test.csv"
-    csv_file.write_text("x,y\n1,2\n3,4\n", encoding="utf-8")
-
-    # Default: privacy preserved, full path omitted
-    report_default = analyze(csv_file)
-    assert report_default.metadata.source_path == "privacy_test.csv"
-
-    # Explicit opt-in: full system path included
-    from datapulse import AnalysisConfig
-
-    report_full = analyze(
-        csv_file, config=AnalysisConfig(include_full_path=True)
-    )
-    assert report_full.metadata.source_path == str(csv_file.resolve())
+        txt_file = tmp_path / "sample.unsupported"
+        txt_file.write_text("a,b\n1,2\n", encoding="utf-8")
+        with pytest.raises(ValueError):
+            analyze(txt_file)

@@ -1,9 +1,17 @@
+# =========================================================================
+# DataPulse Numeric Column Profiler
+# Comprehensive parametric & robust non-parametric summary metrics,
+# including quantiles, IQR, skewness, zeros, negatives, NaNs, and Infs.
+# =========================================================================
+
 import polars as pl
 
+# =========================================================================
+# NUMERIC PROFILER IMPLEMENTATION
+# =========================================================================
 
 def profile_numeric(series: pl.Series, total_rows: int) -> dict[str, object]:
     """Calculate descriptive statistics for a numeric column."""
-
     null_count = series.null_count()
     nan_count = int(series.is_nan().sum()) if series.dtype.is_float() else 0
     inf_count = int(series.is_infinite().sum()) if series.dtype.is_float() else 0

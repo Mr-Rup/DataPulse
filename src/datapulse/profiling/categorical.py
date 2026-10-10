@@ -1,5 +1,13 @@
+# =========================================================================
+# DataPulse Categorical Column Profiler
+# Frequency distribution, distinct counts, cardinality ratios, and modes.
+# =========================================================================
+
 import polars as pl
 
+# =========================================================================
+# CATEGORICAL PROFILER IMPLEMENTATION
+# =========================================================================
 
 def profile_categorical(
     series: pl.Series,
@@ -8,7 +16,6 @@ def profile_categorical(
     sentinels: list[str] | None = None,
 ) -> dict[str, object]:
     """Calculate descriptive statistics and top categories for a categorical column."""
-
     non_null = series.drop_nulls()
     if non_null.len() == 0:
         return {
@@ -35,7 +42,6 @@ def profile_categorical(
             sentinel_count = int(non_null.is_in(sentinels).sum())
 
     effective_missing = series.null_count() + empty_count + sentinel_count
-
     vc_df = non_null.value_counts(sort=True).head(max_categories)
     top_categories = []
 

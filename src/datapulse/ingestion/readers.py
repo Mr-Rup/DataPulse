@@ -1,9 +1,19 @@
+# =========================================================================
+# DataPulse Ingestion Engine & File Readers
+# Zero-copy lazy scanning for Parquet, CSV, TSV, NDJSON, JSON, and Excel,
+# featuring automatic delimiter and EOL line-terminator sniffing.
+# =========================================================================
+
 from dataclasses import dataclass
 from pathlib import Path
 
 import polars as pl
 
-SUPPORTED_EXTENSIONS = {
+# =========================================================================
+# INGESTION CONSTANTS & SOURCE METADATA
+# =========================================================================
+
+SUPPORTED_EXTENSIONS: dict[str, str] = {
     ".parquet": "parquet",
     ".csv": "csv",
     ".tsv": "csv",
@@ -25,13 +35,15 @@ class SourceInfo:
     file_size_mb: float
 
 
-def _sniff_csv_properties(
-    path: Path, user_sep: str | None = None
-) -> tuple[str, str]:
-    """Sniff line terminator and field delimiter from leading bytes of a
-    CSV/TSV file.
-    """
+# =========================================================================
+# FORMAT & DELIMITER SNIFFING HEURISTICS
+# =========================================================================
 
+def _sniff_csv_properties(
+    path: Path,
+    user_sep: str | None = None,
+) -> tuple[str, str]:
+    """Sniff line terminator and field delimiter from leading bytes of a CSV file."""
     with open(path, "rb") as f:
         sample_bytes = f.read(65536)
 
@@ -40,8 +52,8 @@ def _sniff_csv_properties(
         raise ValueError(f"Dataset file contains no data: {path}")
 
     # 1. Line terminator (eol_char):
-    # If \r is present and NO \n is present in sample, it uses classic CR (\r).
-    # Otherwise default to \n (Polars handles both LF and CRLF with \n).
+    # If CR (\r) is present but no LF (\n) is present, legacy CR was used.
+    # Otherwise standard \n handles both UNIX LF and Windows CRLF in Polars.
     if b"\r" in sample_bytes and b"\n" not in sample_bytes:
         eol_char = "\r"
     else:
@@ -63,6 +75,7 @@ def _sniff_csv_properties(
     if not lines:
         return ",", eol_char
 
+    # Score delimiters by consistency across the first several lines
     candidates = [",", "\t", ";", "|"]
     best_sep = ","
     best_score = -1
@@ -85,10 +98,7 @@ def _sniff_csv_properties(
 
 
 def _sniff_json_format(path: Path) -> str:
-    """Inspect leading bytes to determine whether a JSON file is standard
-    JSON or NDJSON.
-    """
-
+    """Inspect leading bytes to detect standard array JSON or NDJSON."""
     with open(path, "rb") as f:
         chunk = f.read(4096).strip()
         if not chunk:
@@ -109,14 +119,17 @@ def _sniff_json_format(path: Path) -> str:
         )
 
 
+# =========================================================================
+# UNIVERSAL LAZY FRAME READER DISPATCHER
+# =========================================================================
+
 def read_source(
     file_path: str | Path,
     *,
     sheet_name: str | None = None,
     separator: str | None = None,
 ) -> tuple[pl.LazyFrame, SourceInfo]:
-    """Read a tabular dataset from disk as a Polars LazyFrame."""
-
+    """Read a tabular dataset from disk as a Polars LazyFrame with validation."""
     path = Path(file_path)
 
     if not path.exists():

@@ -1,3 +1,9 @@
+# =========================================================================
+# DataPulse Quality Rules Engine
+# Automated heuristics for identifying anomalies, severe missingness,
+# duplicates, range violations, outliers, and chronological inversions.
+# =========================================================================
+
 import polars as pl
 
 from datapulse.models.report import (
@@ -6,7 +12,12 @@ from datapulse.models.report import (
     Finding,
 )
 
-NON_NEGATIVE_KEYWORDS = (
+# =========================================================================
+# DOMAIN HEURISTICS & STATIC RULE DEFINITIONS
+# =========================================================================
+
+# Substrings commonly associated with quantities that cannot physically be negative
+NON_NEGATIVE_KEYWORDS: tuple[str, ...] = (
     "fare",
     "amount",
     "distance",
@@ -30,7 +41,8 @@ NON_NEGATIVE_KEYWORDS = (
     "toll",
 )
 
-CHRONOLOGY_PAIRS = (
+# Standard predefined pairs of start-and-end event timestamps
+CHRONOLOGY_PAIRS: tuple[tuple[str, str], ...] = (
     ("tpep_pickup_datetime", "tpep_dropoff_datetime"),
     ("pickup_datetime", "dropoff_datetime"),
     ("started_at", "ended_at"),
@@ -41,10 +53,25 @@ CHRONOLOGY_PAIRS = (
     ("departure_time", "arrival_time"),
 )
 
+# Dynamic suffix pairings used to automatically discover paired temporal columns
+DYNAMIC_TEMPORAL_SUFFIX_PAIRS: tuple[tuple[str, str], ...] = (
+    ("_start", "_end"),
+    ("_begin", "_finish"),
+    ("_pickup", "_dropoff"),
+    ("_opened", "_closed"),
+    ("_created", "_updated"),
+    ("_dispatched", "_received"),
+    ("_departure", "_arrival"),
+    ("_in", "_out"),
+)
+
+
+# =========================================================================
+# COMPLETENESS & STRUCTURAL QUALITY RULES
+# =========================================================================
 
 def check_missingness(columns: list[ColumnProfile]) -> list[Finding]:
-    """Check for columns with severe or moderate missing values."""
-
+    """Check for columns with severe (>=50%) or moderate (>=20%) missing values."""
     findings: list[Finding] = []
     for col in columns:
         if col.missing_percentage >= 50.0:
@@ -82,7 +109,6 @@ def check_missingness(columns: list[ColumnProfile]) -> list[Finding]:
 
 def check_duplicates(duplicates: DuplicateSummary) -> list[Finding]:
     """Check for duplicate rows across the dataset."""
-
     findings: list[Finding] = []
     if duplicates.duplicate_rows > 0:
         severity = "critical" if duplicates.duplicate_percentage >= 10.0 else "warning"
@@ -104,8 +130,7 @@ def check_duplicates(duplicates: DuplicateSummary) -> list[Finding]:
 
 
 def check_constant_columns(columns: list[ColumnProfile]) -> list[Finding]:
-    """Check for columns with zero variance (single value)."""
-
+    """Check for columns with zero variance (single distinct value)."""
     findings: list[Finding] = []
     for col in columns:
         if col.inferred_role == "constant" or (
@@ -129,8 +154,7 @@ def check_constant_columns(columns: list[ColumnProfile]) -> list[Finding]:
 
 
 def check_high_cardinality(columns: list[ColumnProfile]) -> list[Finding]:
-    """Check for categorical columns with suspiciously high cardinality."""
-
+    """Check for categorical columns with suspiciously high cardinality (>50%)."""
     findings: list[Finding] = []
     for col in columns:
         if col.inferred_role == "categorical":
@@ -154,16 +178,20 @@ def check_high_cardinality(columns: list[ColumnProfile]) -> list[Finding]:
     return findings
 
 
+# =========================================================================
+# NUMERIC & DOMAIN CONSTRAINT RULES
+# =========================================================================
+
 def check_negative_values(
     columns: list[ColumnProfile],
     allowed_negative_columns: list[str] | None = None,
     non_negative_columns: list[str] | None = None,
 ) -> list[Finding]:
     """Check for unexpected negative numbers in conventionally non-negative columns."""
-
     findings: list[Finding] = []
     allowed_set = set(allowed_negative_columns or [])
 
+    # If explicit target list is provided, enforce strictly on those columns
     if non_negative_columns is not None:
         target_cols = set(non_negative_columns) - allowed_set
         for col in columns:
@@ -187,7 +215,7 @@ def check_negative_values(
                     )
         return findings
 
-    # Default heuristic checks
+    # Default heuristic checks using domain keyword matching
     for col in columns:
         if col.name in allowed_set:
             continue
@@ -215,11 +243,10 @@ def check_negative_values(
 
 
 def check_numeric_outliers(
-    columns: list[ColumnProfile], df: pl.DataFrame | None
+    columns: list[ColumnProfile],
+    df: pl.DataFrame | None,
 ) -> list[Finding]:
-    """Identify distribution tail values using Tukey IQR rule as informative findings.
-    """
-
+    """Identify distribution tail observations using standard Tukey 1.5x IQR bounds."""
     if df is None:
         return []
 
@@ -244,6 +271,7 @@ def check_numeric_outliers(
                 lower_bound = p25 - 1.5 * iqr
                 upper_bound = p75 + 1.5 * iqr
 
+                # Fast Polars boolean sum for out-of-bounds rows
                 series = df[col.name].drop_nulls()
                 outliers = int(((series < lower_bound) | (series > upper_bound)).sum())
                 if outliers > 0:
@@ -267,28 +295,18 @@ def check_numeric_outliers(
     return findings
 
 
-DYNAMIC_TEMPORAL_SUFFIX_PAIRS = (
-    ("_start", "_end"),
-    ("_begin", "_finish"),
-    ("_pickup", "_dropoff"),
-    ("_opened", "_closed"),
-    ("_created", "_updated"),
-    ("_dispatched", "_received"),
-    ("_departure", "_arrival"),
-    ("_in", "_out"),
-)
-
+# =========================================================================
+# TEMPORAL CHRONOLOGY INVERSION RULES
+# =========================================================================
 
 def check_chronology_inversion(df: pl.DataFrame | None) -> list[Finding]:
-    """Check for temporal inversion where end timestamp is earlier than start."""
-
+    """Check for temporal inversion where an end timestamp precedes its start."""
     if df is None:
         return []
 
     findings: list[Finding] = []
     cols_set = set(df.columns)
     evaluated_pairs: set[tuple[str, str]] = set()
-
     candidate_pairs: list[tuple[str, str]] = list(CHRONOLOGY_PAIRS)
 
     # Dynamically match temporal sibling columns sharing a common prefix
@@ -298,7 +316,7 @@ def check_chronology_inversion(df: pl.DataFrame | None) -> list[Finding]:
         for start_sfx, end_sfx in DYNAMIC_TEMPORAL_SUFFIX_PAIRS:
             if col_a_lower.endswith(start_sfx):
                 prefix = col_a[: len(col_a) - len(start_sfx)]
-                # Look for matching sibling
+                # Look for corresponding sibling column with the end suffix
                 for col_b in temporal_cols:
                     if col_b != col_a and col_b.lower() == f"{prefix.lower()}{end_sfx}":
                         candidate_pairs.append((col_a, col_b))
@@ -314,6 +332,7 @@ def check_chronology_inversion(df: pl.DataFrame | None) -> list[Finding]:
             end_s = df[end_name]
 
             if start_s.dtype.is_temporal() and end_s.dtype.is_temporal():
+                # Compare only rows where both start and end timestamps are populated
                 valid_mask = start_s.is_not_null() & end_s.is_not_null()
                 inversions = int(
                     (end_s.filter(valid_mask) < start_s.filter(valid_mask)).sum()
@@ -343,6 +362,10 @@ def check_chronology_inversion(df: pl.DataFrame | None) -> list[Finding]:
     return findings
 
 
+# =========================================================================
+# MASTER QUALITY RULE EVALUATION PIPELINE
+# =========================================================================
+
 def evaluate_quality_rules(
     columns: list[ColumnProfile],
     duplicates: DuplicateSummary,
@@ -351,8 +374,7 @@ def evaluate_quality_rules(
     allowed_negative_columns: list[str] | None = None,
     non_negative_columns: list[str] | None = None,
 ) -> list[Finding]:
-    """Run all automated data quality and anomaly rules."""
-
+    """Run all automated data quality and anomaly rules across dataset profiles."""
     findings: list[Finding] = []
     findings.extend(check_missingness(columns))
     findings.extend(check_duplicates(duplicates))
@@ -367,5 +389,4 @@ def evaluate_quality_rules(
     )
     findings.extend(check_numeric_outliers(columns, df))
     findings.extend(check_chronology_inversion(df))
-
     return findings

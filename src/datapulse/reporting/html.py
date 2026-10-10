@@ -1,7 +1,17 @@
+# =========================================================================
+# DataPulse HTML Report Generator
+# Standalone, zero-dependency HTML dashboard generation with responsive dark
+# theme, embedded micro-visualizations, interactive search, and KPI cards.
+# =========================================================================
+
 from html import escape
 from pathlib import Path
 
 from datapulse.models.report import AnalysisReport
+
+# =========================================================================
+# EMBEDDED RESPONSIVE CSS STYLESHEET
+# =========================================================================
 
 HTML_CSS = """
 :root {
@@ -226,9 +236,12 @@ footer {
 """
 
 
+# =========================================================================
+# INTERACTIVE HTML REPORT GENERATOR
+# =========================================================================
+
 def generate_html_report(report: AnalysisReport) -> str:
     """Generate a self-contained, interactive HTML document from an AnalysisReport."""
-
     summary = report.summary
     meta = report.metadata
     dup = report.duplicates
@@ -504,9 +517,12 @@ def generate_html_report(report: AnalysisReport) -> str:
     return html
 
 
+# =========================================================================
+# REPORT FILE EXPORTER
+# =========================================================================
+
 def export_html(report: AnalysisReport, output_path: str | Path) -> Path:
     """Generate and write a self-contained HTML report to disk."""
-
     path = Path(output_path)
     path.parent.mkdir(parents=True, exist_ok=True)
     html_content = generate_html_report(report)

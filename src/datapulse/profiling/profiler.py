@@ -1,3 +1,9 @@
+# =========================================================================
+# DataPulse Dataset Profiler Engine
+# High-performance Polars profiler aggregating missingness breakdowns,
+# duplicate summaries, and schema quality metrics in single parallel passes.
+# =========================================================================
+
 from pathlib import Path
 
 import polars as pl
@@ -6,9 +12,16 @@ from datapulse.analysis.column_classifier import classify_column
 from datapulse.ingestion.readers import read_source
 from datapulse.profiling.column_profiler import profile_column as calc_column_stats
 
+# =========================================================================
+# DATASET PROFILER CLASS DEFINITION
+# =========================================================================
 
 class DatasetProfiler:
-    """Profile a tabular dataset using Polars."""
+    """Profile a tabular dataset using Polars with parallel aggregate expressions."""
+
+    # -------------------------------------------------------------------------
+    # Ingestion & Initialization
+    # -------------------------------------------------------------------------
 
     def __init__(
         self,
@@ -17,6 +30,7 @@ class DatasetProfiler:
         sheet_name: str | None = None,
         separator: str | None = None,
     ) -> None:
+        """Initialize profiler by lazily reading dataset and collecting to memory."""
         self.file_path = Path(file_path)
         self.lazy_data, self.source_info = read_source(
             self.file_path,
@@ -25,9 +39,12 @@ class DatasetProfiler:
         )
         self.data = self.lazy_data.collect()
 
-    def get_overview(self) -> dict:
-        """Return basic dataset metadata."""
+    # -------------------------------------------------------------------------
+    # Dataset Overview & Metadata
+    # -------------------------------------------------------------------------
 
+    def get_overview(self) -> dict:
+        """Return basic dataset metadata and column data types."""
         return {
             "file_name": self.source_info.file_name,
             "file_size_mb": self.source_info.file_size_mb,
@@ -39,13 +56,15 @@ class DatasetProfiler:
             },
         }
 
-    def get_missing_values(
-        self, sentinels: list[str] | None = None
-    ) -> pl.DataFrame:
-        """Calculate missing-value breakdown including nulls, NaNs,
-        empty strings, and sentinels.
-        """
+    # -------------------------------------------------------------------------
+    # Unified Missingness & Sentinel Accounting
+    # -------------------------------------------------------------------------
 
+    def get_missing_values(
+        self,
+        sentinels: list[str] | None = None,
+    ) -> pl.DataFrame:
+        """Calculate complete missingness: nulls, NaNs, empty strings, sentinels."""
         total_rows = self.data.height
         if total_rows == 0:
             return pl.DataFrame(
@@ -61,7 +80,7 @@ class DatasetProfiler:
                 }
             )
 
-        # Build batched aggregate expressions for a single parallel pass
+        # Build batched aggregate expressions for a single parallel scan pass
         exprs: list[pl.Expr] = []
         for col in self.data.columns:
             dtype = self.data.schema[col]
@@ -132,17 +151,18 @@ class DatasetProfiler:
             },
         )
 
-    def get_duplicate_summary(self) -> dict[str, int | float]:
-        """Calculate duplicate-row counts and percentages."""
+    # -------------------------------------------------------------------------
+    # Duplicate Rows Analysis
+    # -------------------------------------------------------------------------
 
+    def get_duplicate_summary(self) -> dict[str, int | float]:
+        """Calculate complete duplicate-row counts and percentages."""
         total_rows = self.data.height
         unique_rows = self.data.n_unique()
         duplicate_rows = total_rows - unique_rows
-
         duplicate_percentage = (
             (duplicate_rows / total_rows) * 100 if total_rows > 0 else 0.0
         )
-
         return {
             "total_rows": total_rows,
             "unique_rows": unique_rows,
@@ -150,27 +170,26 @@ class DatasetProfiler:
             "duplicate_percentage": round(duplicate_percentage, 2),
         }
 
-    def get_numeric_statistics(self) -> pl.DataFrame:
-        """Calculate descriptive statistics for numeric columns."""
+    # -------------------------------------------------------------------------
+    # Role-Specific Aggregations
+    # -------------------------------------------------------------------------
 
+    def get_numeric_statistics(self) -> pl.DataFrame:
+        """Calculate descriptive statistics for numeric columns via describe()."""
         numeric_columns = [
             name for name, dtype in self.data.schema.items() if dtype.is_numeric()
         ]
-
         if not numeric_columns:
             return pl.DataFrame()
-
         return self.data.select(numeric_columns).describe()
 
     def get_categorical_statistics(self) -> pl.DataFrame:
-        """Summarize distinct values and cardinality for each column."""
-
+        """Summarize distinct counts and cardinality for categorical columns."""
         categorical_columns = [
             name
             for name, dtype in self.data.schema.items()
             if dtype == pl.String or dtype == pl.Categorical or dtype == pl.Enum
         ]
-
         if not categorical_columns:
             return pl.DataFrame(
                 schema={
@@ -182,14 +201,11 @@ class DatasetProfiler:
 
         total_rows = self.data.height
         summaries = []
-
         for column in categorical_columns:
             unique_count = self.data[column].n_unique()
-
             cardinality_percentage = (
                 (unique_count / total_rows) * 100 if total_rows > 0 else 0.0
             )
-
             summaries.append(
                 {
                     "column": column,
@@ -197,33 +213,27 @@ class DatasetProfiler:
                     "cardinality_percentage": round(cardinality_percentage, 2),
                 }
             )
-
         return pl.DataFrame(summaries)
 
     def get_temporal_statistics(self) -> pl.DataFrame:
-        """Summarize date and datetime columns."""
-
+        """Summarize boundary ranges and distinct counts for temporal columns."""
         temporal_columns = [
             name for name, dtype in self.data.schema.items() if dtype.is_temporal()
         ]
-
         schema = {
             "column": pl.String,
             "minimum": pl.String,
             "maximum": pl.String,
             "unique_count": pl.UInt32,
         }
-
         if not temporal_columns:
             return pl.DataFrame(schema=schema)
 
         summaries = []
-
         for column in temporal_columns:
             series = self.data[column]
             minimum = series.min()
             maximum = series.max()
-
             summaries.append(
                 {
                     "column": column,
@@ -232,14 +242,17 @@ class DatasetProfiler:
                     "unique_count": series.drop_nulls().n_unique(),
                 }
             )
-
         return pl.DataFrame(summaries, schema=schema)
 
-    def get_column_quality(
-        self, sentinels: list[str] | None = None
-    ) -> pl.DataFrame:
-        """Summarize column types and basic data-quality metrics."""
+    # -------------------------------------------------------------------------
+    # Column Quality & Profiler Dispatch
+    # -------------------------------------------------------------------------
 
+    def get_column_quality(
+        self,
+        sentinels: list[str] | None = None,
+    ) -> pl.DataFrame:
+        """Summarize column physical types, inferred roles, and missingness."""
         missing_df = self.get_missing_values(sentinels=sentinels)
         missing_map = {row["column"]: row for row in missing_df.iter_rows(named=True)}
 
@@ -298,8 +311,7 @@ class DatasetProfiler:
         max_categories: int = 20,
         sentinels: list[str] | None = None,
     ) -> dict[str, object]:
-        """Profile a column using role-specific descriptive statistics."""
-
+        """Profile a column using role-specific descriptive statistics dispatch."""
         series = self.data[column]
         total_rows = self.data.height
 

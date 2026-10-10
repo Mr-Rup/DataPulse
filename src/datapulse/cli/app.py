@@ -1,3 +1,9 @@
+# =========================================================================
+# DataPulse Command-Line Interface (CLI)
+# Interactive Typer app for profiling datasets directly from the terminal,
+# supporting terminal tables, JSON streaming, and HTML dashboard exports.
+# =========================================================================
+
 from pathlib import Path
 from typing import Annotated
 
@@ -9,6 +15,10 @@ from datapulse.api import analyze
 from datapulse.config import AnalysisConfig, load_config
 from datapulse.reporting.terminal import display_report
 
+# =========================================================================
+# APPLICATION SETUP & GLOBAL CALLBACKS
+# =========================================================================
+
 app = typer.Typer(
     name="datapulse",
     help="Automated tabular exploratory data analysis (EDA) toolkit.",
@@ -17,6 +27,7 @@ app = typer.Typer(
 
 
 def version_callback(value: bool) -> None:
+    """Print the package version and terminate execution."""
     if value:
         typer.echo(f"DataPulse v{__version__}")
         raise typer.Exit()
@@ -37,6 +48,10 @@ def main(
 ) -> None:
     """DataPulse: Automated exploratory data analysis."""
 
+
+# =========================================================================
+# COMMAND IMPLEMENTATIONS
+# =========================================================================
 
 @app.command(name="analyze")
 def run_analyze(
@@ -118,14 +133,13 @@ def run_analyze(
     ] = False,
 ) -> None:
     """Analyze a dataset and generate an automated EDA report."""
-
     fmt = format.lower()
     if fmt not in ("terminal", "html", "json"):
         raise typer.BadParameter(
             f"Invalid format '{format}'. Supported formats: terminal, html, json"
         )
 
-    # 1. Base config
+    # 1. Base configuration loading
     if config:
         try:
             cfg = load_config(config)
@@ -135,7 +149,7 @@ def run_analyze(
     else:
         cfg = AnalysisConfig()
 
-    # 2. Command-line overrides
+    # 2. CLI flag overrides
     overrides: dict[str, object] = {}
     if max_categories is not None:
         overrides["max_categories"] = max_categories
@@ -149,14 +163,14 @@ def run_analyze(
     if overrides:
         cfg = cfg.model_copy(update=overrides)
 
-    # 3. Execution
+    # 3. Execution pipeline
     try:
         report = analyze(file_path, config=cfg)
     except Exception as exc:
         rich.print(f"[bold red]Analysis error:[/bold red] {exc}")
         raise typer.Exit(code=1) from exc
 
-    # 4. Reporting
+    # 4. Multi-format rendering and export
     if fmt == "terminal":
         if not quiet:
             display_report(report)

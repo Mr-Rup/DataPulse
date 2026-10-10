@@ -1,3 +1,9 @@
+# =========================================================================
+# DataPulse Relationships & Collinearity Analysis
+# Vectorized pairwise correlation calculations, primary key discovery,
+# and high-collinearity redundancy detection.
+# =========================================================================
+
 import math
 from typing import Literal
 
@@ -10,6 +16,9 @@ from datapulse.models.report import (
     KeyCandidate,
 )
 
+# =========================================================================
+# PAIRWISE NUMERIC CORRELATION ENGINE
+# =========================================================================
 
 def compute_correlations(
     df: pl.DataFrame,
@@ -19,8 +28,7 @@ def compute_correlations(
     max_correlation_columns: int = 30,
 ) -> list[CorrelationPair]:
     """Compute pairwise numeric correlation coefficients and joint sample sizes."""
-
-    # Filter to numeric columns actually present in df with non-constant variance
+    # Filter to numeric columns present in df with non-constant variance
     valid_cols: list[str] = []
     for col in numeric_cols:
         if col in df.columns and df[col].dtype.is_numeric():
@@ -43,6 +51,7 @@ def compute_correlations(
         for col_b in valid_cols[i + 1 :]
     ]
 
+    # Build batched Polars expressions for parallel correlation computation
     exprs: list[pl.Expr] = []
     for idx, (col_a, col_b) in enumerate(pairs):
         exprs.append(pl.corr(col_a, col_b, method=method).alias(f"c_{idx}"))
@@ -72,16 +81,20 @@ def compute_correlations(
                     )
                 )
 
-    # Sort descending by absolute correlation strength
+    # Sort descending by absolute correlation magnitude
     results.sort(key=lambda p: abs(p.coefficient), reverse=True)
     return results
 
 
+# =========================================================================
+# PRIMARY KEY CANDIDATE DISCOVERY
+# =========================================================================
+
 def find_key_candidates(
-    columns: list[ColumnProfile], total_rows: int
+    columns: list[ColumnProfile],
+    total_rows: int,
 ) -> list[KeyCandidate]:
     """Identify primary key candidates with 100% uniqueness and zero missing values."""
-
     if total_rows == 0:
         return []
 
@@ -95,15 +108,18 @@ def find_key_candidates(
                     is_primary_key_candidate=True,
                 )
             )
-
     return candidates
 
 
-def evaluate_collinear_findings(
-    correlations: list[CorrelationPair], threshold: float = 0.90
-) -> list[Finding]:
-    """Flag highly collinear pairs as potential leakage or redundancy."""
+# =========================================================================
+# COLLINEARITY & LEAKAGE FINDINGS EVALUATOR
+# =========================================================================
 
+def evaluate_collinear_findings(
+    correlations: list[CorrelationPair],
+    threshold: float = 0.90,
+) -> list[Finding]:
+    """Flag highly collinear pairs (|r| >= threshold) as potential redundancy."""
     findings: list[Finding] = []
     for pair in correlations:
         if abs(pair.coefficient) >= threshold:
@@ -122,5 +138,4 @@ def evaluate_collinear_findings(
                     affected_percentage=0.0,
                 )
             )
-
     return findings

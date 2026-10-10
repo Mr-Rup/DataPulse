@@ -1,9 +1,18 @@
+# =========================================================================
+# DataPulse Report Data Models
+# Strongly-typed dataclasses modeling comprehensive dataset profiles,
+# quality findings, correlations, and RFC 8259 compliant JSON serialization.
+# =========================================================================
+
 import json
 import math
 from dataclasses import asdict, dataclass, field
 from pathlib import Path
 from typing import Any
 
+# =========================================================================
+# GRANULAR PROFILE MODELS
+# =========================================================================
 
 @dataclass
 class ReportMetadata:
@@ -104,6 +113,10 @@ class KeyCandidate:
     is_primary_key_candidate: bool
 
 
+# =========================================================================
+# TOP-LEVEL ANALYSIS REPORT
+# =========================================================================
+
 @dataclass
 class AnalysisReport:
     """Structured report produced by DataPulse."""
@@ -121,36 +134,34 @@ class AnalysisReport:
 
     def to_dict(self) -> dict[str, Any]:
         """Convert the report to a dictionary representation."""
-
         return asdict(self)
 
     def to_json(self, indent: int = 2) -> str:
         """Serialize the report to a valid RFC 8259 JSON string."""
-
         sanitized = _sanitize_for_json(self.to_dict())
         return json.dumps(
             sanitized, indent=indent, allow_nan=False, ensure_ascii=False
         )
 
-
     def save_json(self, output_path: str | Path, indent: int = 2) -> Path:
         """Save report to a JSON file."""
-
         from datapulse.reporting.json_exporter import export_json
 
         return export_json(self, output_path, indent=indent)
 
     def save_html(self, output_path: str | Path) -> Path:
         """Save report to a self-contained HTML file."""
-
         from datapulse.reporting.html import export_html
 
         return export_html(self, output_path)
 
 
-def _sanitize_for_json(obj: Any) -> Any:
-    """Recursively replace non-finite float values with None for RFC 8259 compliance."""
+# =========================================================================
+# SERIALIZATION UTILITIES
+# =========================================================================
 
+def _sanitize_for_json(obj: Any) -> Any:
+    """Recursively replace non-finite float values with None for RFC 8259."""
     if isinstance(obj, float):
         if math.isnan(obj) or math.isinf(obj):
             return None

@@ -1,3 +1,9 @@
+# =========================================================================
+# DataPulse Configuration Engine
+# Strict Pydantic models for profiling hyperparameters, thresholds,
+# missing sentinels, and configuration file parsers (JSON, TOML).
+# =========================================================================
+
 import json
 import tomllib
 from pathlib import Path
@@ -5,9 +11,12 @@ from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
+# =========================================================================
+# PROFILING CONFIGURATION MODEL
+# =========================================================================
 
 class AnalysisConfig(BaseModel):
-    """Configuration settings for dataset profiling."""
+    """Configuration settings for dataset profiling and quality evaluation."""
 
     model_config = ConfigDict(extra="forbid", validate_assignment=True)
 
@@ -75,9 +84,12 @@ class AnalysisConfig(BaseModel):
     )
 
 
-def load_config(config_path: str | Path) -> AnalysisConfig:
-    """Load configuration from a JSON or TOML file."""
+# =========================================================================
+# CONFIGURATION FILE LOADER
+# =========================================================================
 
+def load_config(config_path: str | Path) -> AnalysisConfig:
+    """Load configuration from a JSON or TOML file with validation."""
     path = Path(config_path)
     if not path.exists():
         raise FileNotFoundError(f"Configuration file not found: {path}")
@@ -95,7 +107,7 @@ def load_config(config_path: str | Path) -> AnalysisConfig:
             "Supported formats: .json, .toml"
         )
 
-    # Allow nesting under a [datapulse] section
+    # Allow nesting under an optional [datapulse] section
     if "datapulse" in data and isinstance(data["datapulse"], dict):
         data = data["datapulse"]
 

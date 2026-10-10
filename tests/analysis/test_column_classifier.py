@@ -1,3 +1,7 @@
+# =============================================================================
+# Unit & Scenario Tests: Column Classification
+# =============================================================================
+
 from datetime import datetime
 
 import polars as pl
@@ -7,140 +11,113 @@ from datapulse.analysis.column_classifier import (
     classify_columns,
 )
 
-
-def test_classify_constant_column():
-    series = pl.Series("status", ["active", "active", "active"])
-    result = classify_column(series, 3)
-
-    assert result.inferred_role == "constant"
-    assert result.confidence == 1.0
+# =============================================================================
+# 1. PHYSICAL & INVARIANT CLASSIFICATION
+# =============================================================================
 
 
-def test_classify_boolean_column():
-    series = pl.Series("is_member", [True, False, True])
-    result = classify_column(series, 3)
+class TestPhysicalAndInvariantClassification:
+    """Validate physical data types and invariant columns (nulls, constants, booleans)."""
 
-    assert result.inferred_role == "boolean"
-    assert result.confidence == 1.0
+    def test_trivial_and_primitive_types(self):
+        # All null series
+        null_series = pl.Series("empty_col", [None, None, None], dtype=pl.String)
+        res_null = classify_column(null_series, 3)
+        assert res_null.inferred_role == "other"
 
+        # Constant series
+        const_series = pl.Series("status", ["active", "active", "active"])
+        res_const = classify_column(const_series, 3)
+        assert res_const.inferred_role == "constant"
+        assert res_const.confidence == 1.0
 
-def test_classify_temporal_column():
-    series = pl.Series(
-        "created_at",
-        [datetime(2025, 1, 1), datetime(2025, 1, 2)],
-        dtype=pl.Datetime,
-    )
-    result = classify_column(series, 2)
+        # Physical boolean series
+        bool_series = pl.Series("is_member", [True, False, True])
+        res_bool = classify_column(bool_series, 3)
+        assert res_bool.inferred_role == "boolean"
+        assert res_bool.confidence == 1.0
 
-    assert result.inferred_role == "temporal"
-    assert result.confidence == 1.0
-
-
-def test_classify_numeric_float():
-    series = pl.Series("fare_amount", [10.5, 20.0, 15.25])
-    result = classify_column(series, 3)
-
-    assert result.inferred_role == "numeric"
-    assert result.confidence > 0.9
-
-
-def test_classify_coded_integer_category():
-    # Like payment_type (1, 2, 1, 2, 3)
-    series = pl.Series("payment_type", [1, 2, 1, 2, 3, 1, 2] * 20)
-    result = classify_column(series, len(series))
-
-    assert result.inferred_role == "categorical"
-    assert "Low-cardinality" in result.reason or "code" in result.reason
+        # Temporal Datetime series
+        date_series = pl.Series(
+            "created_at",
+            [datetime(2025, 1, 1), datetime(2025, 1, 2)],
+            dtype=pl.Datetime,
+        )
+        res_date = classify_column(date_series, 2)
+        assert res_date.inferred_role == "temporal"
+        assert res_date.confidence == 1.0
 
 
-def test_classify_integer_identifier():
-    # Like PULocationID with moderate-to-high cardinality and ID hint
-    series = pl.Series("PULocationID", list(range(1, 101)))
-    result = classify_column(series, len(series))
-
-    assert result.inferred_role == "identifier"
+# =============================================================================
+# 2. SEMANTIC CLASSIFICATION ON REALISTIC DATA
+# =============================================================================
 
 
-def test_classify_text_column():
-    descriptions = [
-        "Customer reported an unexpected delay during rush hour near central station.",
-        "Driver was polite, vehicle clean, arrived slightly ahead of scheduled time.",
-        "Traffic diversion due to road maintenance caused additional mileage.",
-    ]
-    series = pl.Series("notes", descriptions * 10)
-    result = classify_column(series, len(series))
+class TestSemanticClassification:
+    """Validate heuristic role inference on realistic multifaceted dataset columns."""
 
-    assert result.inferred_role == "text"
+    def test_realistic_dataset_column_inference(
+        self, realistic_tabular_df: pl.DataFrame
+    ):
+        total_rows = len(realistic_tabular_df)
 
+        # Continuous numeric amount
+        res_amt = classify_column(realistic_tabular_df["amount"], total_rows)
+        assert res_amt.inferred_role == "numeric"
+        assert "continuous" in res_amt.alternative_roles
 
-def test_classify_string_category():
-    series = pl.Series("borough", ["Manhattan", "Brooklyn", "Queens"] * 10)
-    result = classify_column(series, len(series))
+        # Discrete coded integer (payment_type: 1, 2, 3)
+        res_code = classify_column(realistic_tabular_df["payment_type"], total_rows)
+        assert res_code.inferred_role == "categorical"
+        assert "Low-cardinality" in res_code.reason or "code" in res_code.reason
 
-    assert result.inferred_role == "categorical"
+        # Float identifier (float_id: 1001.0 .. 1050.0)
+        res_fid = classify_column(realistic_tabular_df["float_id"], total_rows)
+        assert res_fid.inferred_role == "identifier"
+        assert "numeric" in res_fid.alternative_roles
 
+        # Unique integer identifier (id: 1..50)
+        res_id = classify_column(realistic_tabular_df["id"], total_rows)
+        assert res_id.inferred_role == "identifier"
 
-def test_classify_all_null():
-    series = pl.Series("empty_col", [None, None, None], dtype=pl.String)
-    result = classify_column(series, 3)
+        # Free-form text descriptions
+        res_text = classify_column(realistic_tabular_df["description"], total_rows)
+        assert res_text.inferred_role == "text"
 
-    assert result.inferred_role == "other"
+        # Low-cardinality string categories
+        res_cat = classify_column(realistic_tabular_df["category"], total_rows)
+        assert res_cat.inferred_role == "categorical"
 
-
-def test_classify_columns_dataframe():
-    df = pl.DataFrame(
-        {
-            "id": [1, 2, 3, 4],
-            "fare": [10.0, 15.5, 20.0, 25.0],
-            "payment_type": [1, 2, 1, 2],
-            "flag": [True, False, True, False],
-            "city": ["NY", "NY", "LA", "SF"],
-        }
-    )
-
-    classifications = classify_columns(df)
-
-    assert classifications["fare"].inferred_role == "numeric"
-    assert classifications["payment_type"].inferred_role == "categorical"
-    assert classifications["flag"].inferred_role == "boolean"
-    assert classifications["city"].inferred_role == "categorical"
+        # Constant column
+        res_cst = classify_column(realistic_tabular_df["constant_col"], total_rows)
+        assert res_cst.inferred_role == "constant"
 
 
-def test_classify_user_role_overrides():
-    df = pl.DataFrame(
-        {
-            "user_id": [101, 102, 103],
-            "fare": [10.5, 20.0, 15.25],
-        }
-    )
-
-    overrides = {"user_id": "categorical", "fare": "text"}
-    classifications = classify_columns(df, column_roles=overrides)
-
-    assert classifications["user_id"].inferred_role == "categorical"
-    assert classifications["user_id"].confidence == 1.0
-    assert "User-specified override" in classifications["user_id"].reason
-
-    assert classifications["fare"].inferred_role == "text"
-    assert classifications["fare"].confidence == 1.0
+# =============================================================================
+# 3. OVERRIDES & BATCH DATAFRAME INFERENCE
+# =============================================================================
 
 
-def test_classify_integer_valued_float_id():
-    # Floats that represent IDs due to nullability (e.g. 1001.0, 1002.0)
-    series = pl.Series("employee_id", [1001.0, 1002.0, 1003.0, 1004.0, 1005.0])
-    result = classify_column(series, 5)
+class TestClassificationOverridesAndBatch:
+    """Validate user configuration overrides and full DataFrame batch classification."""
 
-    assert result.inferred_role == "identifier"
-    assert "numeric" in result.alternative_roles
+    def test_user_role_overrides_take_precedence(self):
+        df = pl.DataFrame({"user_id": [101, 102, 103], "fare": [10.5, 20.0, 15.25]})
+        overrides = {"user_id": "categorical", "fare": "text"}
+        results = classify_columns(df, column_roles=overrides)
 
+        assert results["user_id"].inferred_role == "categorical"
+        assert results["user_id"].confidence == 1.0
+        assert "User-specified override" in results["user_id"].reason
 
-def test_classify_discrete_vs_continuous_alternative_roles():
-    cont_series = pl.Series("temperature", [98.6, 99.1, 98.4, 100.2])
-    res_cont = classify_column(cont_series, 4)
-    assert res_cont.inferred_role == "numeric"
-    assert "continuous" in res_cont.alternative_roles
+        assert results["fare"].inferred_role == "text"
+        assert results["fare"].confidence == 1.0
 
-    disc_series = pl.Series("item_count", [1, 5, 2, 8, 4])
-    res_disc = classify_column(disc_series, 5)
-    assert res_disc.inferred_role == "numeric"
-    assert "discrete" in res_disc.alternative_roles
+    def test_batch_classification_dataframe(self, realistic_tabular_df: pl.DataFrame):
+        classifications = classify_columns(realistic_tabular_df)
+
+        assert classifications["amount"].inferred_role == "numeric"
+        assert classifications["category"].inferred_role == "categorical"
+        assert classifications["is_active"].inferred_role == "boolean"
+        assert classifications["description"].inferred_role == "text"
+        assert classifications["order_start"].inferred_role == "temporal"

@@ -1,11 +1,18 @@
+# =========================================================================
+# DataPulse Temporal Column Profiler
+# Chronological boundaries (min/max), range duration (span in days/seconds).
+# =========================================================================
+
 from datetime import date, datetime
 
 import polars as pl
 
+# =========================================================================
+# TEMPORAL PROFILER IMPLEMENTATION
+# =========================================================================
 
 def profile_temporal(series: pl.Series, total_rows: int) -> dict[str, object]:
     """Calculate descriptive statistics for a date or datetime column."""
-
     non_null = series.drop_nulls()
     if non_null.len() == 0:
         return {

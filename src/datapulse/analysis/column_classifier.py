@@ -1,7 +1,16 @@
+# =========================================================================
+# DataPulse Column Classifier
+# Heuristic inference engine mapping physical Polars data types into
+# high-level analytical roles (numeric, categorical, temporal, etc.).
+# =========================================================================
+
 from dataclasses import dataclass, field
 
 import polars as pl
 
+# =========================================================================
+# DATA STRUCTURES
+# =========================================================================
 
 @dataclass(frozen=True)
 class ColumnClassification:
@@ -15,17 +24,71 @@ class ColumnClassification:
     alternative_roles: list[str] = field(default_factory=list)
 
 
+# =========================================================================
+# HEURISTIC CONSTANTS & PATTERNS
+# =========================================================================
+
+# Naming suffixes and tokens commonly indicating primary/foreign keys or codes
+ID_SUFFIX_HINTS: tuple[str, ...] = (
+    "_id",
+    "id",
+    "_key",
+    "key",
+    "code",
+)
+
+# Semantic substrings in column names indicating continuous metric measurements
+METRIC_NAME_HINTS: tuple[str, ...] = (
+    "fare",
+    "amount",
+    "price",
+    "cost",
+    "total",
+    "fee",
+    "tip",
+    "units",
+    "revenue",
+    "count",
+    "qty",
+    "quantity",
+    "val",
+    "score",
+    "temp",
+    "speed",
+    "distance",
+    "rate",
+    "pct",
+    "percent",
+)
+
+# Semantic substrings in column names indicating discrete status or classification
+CODE_NAME_HINTS: tuple[str, ...] = (
+    "type",
+    "status",
+    "mode",
+    "class",
+    "group",
+    "category",
+)
+
+
+# =========================================================================
+# CORE COLUMN CLASSIFICATION ENGINE
+# =========================================================================
+
 def classify_column(
     series: pl.Series,
     total_rows: int,
     override_role: str | None = None,
 ) -> ColumnClassification:
-    """Infer the analytical role of a Polars Series."""
-
+    """Infer the analytical role of a Polars Series using multi-tier heuristics."""
     name = series.name
     dtype = series.dtype
     name_lower = name.lower()
 
+    # -------------------------------------------------------------------------
+    # Configuration Overrides & Degenerate Cases
+    # -------------------------------------------------------------------------
     if override_role:
         return ColumnClassification(
             name=name,
@@ -36,6 +99,7 @@ def classify_column(
             alternative_roles=[],
         )
 
+    # Empty datasets or columns with 100% missing values
     if total_rows == 0 or series.null_count() == total_rows:
         return ColumnClassification(
             name=name,
@@ -49,6 +113,7 @@ def classify_column(
     non_null = series.drop_nulls()
     unique_count = non_null.n_unique()
 
+    # Zero variance columns (single distinct scalar value)
     if unique_count <= 1:
         return ColumnClassification(
             name=name,
@@ -59,6 +124,9 @@ def classify_column(
             alternative_roles=[],
         )
 
+    # -------------------------------------------------------------------------
+    # Invariant Physical Types (Boolean & Temporal)
+    # -------------------------------------------------------------------------
     if dtype == pl.Boolean:
         return ColumnClassification(
             name=name,
@@ -79,19 +147,15 @@ def classify_column(
             alternative_roles=[],
         )
 
-    has_id_hint = (
-        name_lower.endswith("_id")
-        or name_lower.endswith("id")
-        or name_lower == "id"
-        or name_lower.endswith("_key")
-        or name_lower.endswith("key")
-        or name_lower.endswith("code")
-    )
-
+    # Precalculate cardinality ratio and identifier naming cues
+    has_id_hint = any(name_lower.endswith(sfx) for sfx in ID_SUFFIX_HINTS)
     cardinality_ratio = unique_count / total_rows if total_rows > 0 else 0.0
 
+    # -------------------------------------------------------------------------
+    # Numeric Types (Integers, Floats, Indicators, Codes)
+    # -------------------------------------------------------------------------
     if dtype.is_numeric():
-        # Check if float values are actually whole integers (e.g. 1001.0, 1002.0)
+        # Check if float column contains solely whole integers (e.g. 1001.0)
         is_integer_valued = False
         if dtype.is_float() and non_null.len() > 0:
             finite = non_null.filter(non_null.is_finite())
@@ -100,6 +164,7 @@ def classify_column(
                 if frac == 0.0:
                     is_integer_valued = True
 
+        # Pure continuous measurement (floats with fractional parts)
         if dtype.is_float() and not is_integer_valued:
             return ColumnClassification(
                 name=name,
@@ -110,7 +175,7 @@ def classify_column(
                 alternative_roles=["continuous"],
             )
 
-        # Either physical integer or whole-number float
+        # Binary indicator encoded as numeric {0, 1}
         if unique_count == 2:
             unique_vals = set(non_null.head(100).unique().to_list())
             if unique_vals.issubset({0, 1}):
@@ -123,6 +188,7 @@ def classify_column(
                     alternative_roles=["categorical", "numeric"],
                 )
 
+        # Numeric column with identifier naming hint (e.g. customer_id, store_code)
         if has_id_hint:
             if cardinality_ratio >= 0.8:
                 return ColumnClassification(
@@ -151,37 +217,10 @@ def classify_column(
                 alternative_roles=["numeric"],
             )
 
-        has_metric_hint = any(
-            hint in name_lower
-            for hint in (
-                "fare",
-                "amount",
-                "price",
-                "cost",
-                "total",
-                "fee",
-                "tip",
-                "units",
-                "revenue",
-                "count",
-                "qty",
-                "quantity",
-                "val",
-                "score",
-                "temp",
-                "speed",
-                "distance",
-                "rate",
-                "pct",
-                "percent",
-            )
-        )
+        has_metric_hint = any(hint in name_lower for hint in METRIC_NAME_HINTS)
+        has_code_hint = any(hint in name_lower for hint in CODE_NAME_HINTS)
 
-        has_code_hint = any(
-            hint in name_lower
-            for hint in ("type", "status", "mode", "class", "group", "category")
-        )
-
+        # Discrete numeric codes (e.g. payment_type: 1, 2, 3, 4)
         if (
             (has_code_hint or not has_metric_hint)
             and unique_count <= 20
@@ -196,6 +235,7 @@ def classify_column(
                 alternative_roles=["numeric", "discrete"],
             )
 
+        # Monotonic or near-unique integer sequences without explicit naming hints
         if cardinality_ratio > 0.9 and total_rows > 100:
             return ColumnClassification(
                 name=name,
@@ -215,12 +255,13 @@ def classify_column(
             alternative_roles=["discrete"],
         )
 
+    # -------------------------------------------------------------------------
+    # String & Categorical Types (Identifiers, Text, Codes)
+    # -------------------------------------------------------------------------
     if dtype in (pl.String, pl.Categorical, pl.Enum):
         has_str_id_hint = (
-            name_lower.endswith("_id")
-            or name_lower == "id"
+            any(name_lower.endswith(sfx) for sfx in ("_id", "id", "_key", "key"))
             or name_lower.endswith("uuid")
-            or name_lower.endswith("_key")
         )
         if has_str_id_hint:
             return ColumnClassification(
@@ -232,6 +273,7 @@ def classify_column(
                 alternative_roles=["categorical"],
             )
 
+        # High cardinality strings (e.g. user tokens, session hashes)
         if cardinality_ratio > 0.9 and total_rows > 100:
             return ColumnClassification(
                 name=name,
@@ -242,6 +284,7 @@ def classify_column(
                 alternative_roles=["categorical"],
             )
 
+        # Long freeform text content (e.g. comments, user reviews, descriptions)
         if dtype == pl.String and non_null.len() > 0:
             sample_str = non_null.head(100)
             avg_len = sample_str.str.len_bytes().mean()
@@ -264,6 +307,9 @@ def classify_column(
             alternative_roles=[],
         )
 
+    # -------------------------------------------------------------------------
+    # Fallback for Unknown / Complex Dtypes
+    # -------------------------------------------------------------------------
     return ColumnClassification(
         name=name,
         physical_type=str(dtype),
@@ -274,12 +320,15 @@ def classify_column(
     )
 
 
+# =========================================================================
+# BATCH DATAFRAME INFERENCE
+# =========================================================================
+
 def classify_columns(
     df: pl.DataFrame,
     column_roles: dict[str, str] | None = None,
 ) -> dict[str, ColumnClassification]:
     """Classify all columns in a Polars DataFrame into analytical roles."""
-
     total_rows = df.height
     return {
         col: classify_column(

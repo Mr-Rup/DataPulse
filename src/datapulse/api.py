@@ -1,3 +1,9 @@
+# =========================================================================
+# DataPulse Public API Pipeline
+# High-level entry point orchestrating dataset ingestion, missingness
+# analysis, column profiling, relationship discovery, and report generation.
+# =========================================================================
+
 import time
 from datetime import UTC, datetime
 from pathlib import Path
@@ -21,16 +27,21 @@ from datapulse.models.report import (
 )
 from datapulse.profiling.profiler import DatasetProfiler
 
+# =========================================================================
+# PUBLIC ANALYSIS PIPELINE
+# =========================================================================
 
 def analyze(
     file_path: str | Path,
     config: AnalysisConfig | None = None,
 ) -> AnalysisReport:
-    """Analyze a dataset and produce a structured AnalysisReport."""
-
+    """Analyze a tabular dataset and produce a fully populated AnalysisReport."""
     start_time = time.perf_counter()
     path = Path(file_path)
 
+    # -------------------------------------------------------------------------
+    # Dataset Profiling & Overview Extraction
+    # -------------------------------------------------------------------------
     profiler = DatasetProfiler(
         path,
         sheet_name=config.sheet_name if config else None,
@@ -38,12 +49,14 @@ def analyze(
     )
 
     sentinels = config.missing_sentinels if config else None
-
     overview = profiler.get_overview()
     missing_df = profiler.get_missing_values(sentinels=sentinels)
     duplicate_dict = profiler.get_duplicate_summary()
     quality_df = profiler.get_column_quality(sentinels=sentinels)
 
+    # -------------------------------------------------------------------------
+    # Structural & Missingness Summaries
+    # -------------------------------------------------------------------------
     summary = DatasetSummary(
         file_name=overview["file_name"],
         file_size_mb=overview["file_size_mb"],
@@ -75,6 +88,9 @@ def analyze(
 
     quality_map = {row["column"]: row for row in quality_df.iter_rows(named=True)}
 
+    # -------------------------------------------------------------------------
+    # Column Classification & Role-Specific Profiling
+    # -------------------------------------------------------------------------
     column_roles = config.column_roles if config else None
     classifications = classify_columns(profiler.data, column_roles=column_roles)
     max_categories = config.max_categories if config else 20
@@ -117,7 +133,6 @@ def analyze(
         columns.append(profile)
 
     elapsed = round(time.perf_counter() - start_time, 4)
-
     inc_full_path = config.include_full_path if config else False
     src_path_str = str(path.resolve()) if inc_full_path else path.name
 
@@ -130,6 +145,9 @@ def analyze(
         elapsed_seconds=elapsed,
     )
 
+    # -------------------------------------------------------------------------
+    # Correlation & Primary Key Discovery
+    # -------------------------------------------------------------------------
     compute_corr = config.compute_correlations if config else True
     if compute_corr:
         corr_method = config.correlation_method if config else "pearson"
@@ -149,6 +167,9 @@ def analyze(
 
     key_candidates = find_key_candidates(columns, summary.row_count)
 
+    # -------------------------------------------------------------------------
+    # Quality Rules Evaluation & Report Assembly
+    # -------------------------------------------------------------------------
     findings = evaluate_quality_rules(
         columns,
         duplicates,
