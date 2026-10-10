@@ -75,7 +75,8 @@ def analyze(
 
     quality_map = {row["column"]: row for row in quality_df.iter_rows(named=True)}
 
-    classifications = classify_columns(profiler.data)
+    column_roles = config.column_roles if config else None
+    classifications = classify_columns(profiler.data, column_roles=column_roles)
     max_categories = config.max_categories if config else 20
 
     columns: list[ColumnProfile] = []
@@ -89,6 +90,7 @@ def analyze(
         )
         conf = classification.confidence if classification else 1.0
         reason = classification.reason if classification else ""
+        alt_roles = classification.alternative_roles if classification else []
 
         stats = profiler.profile_column(
             col_name,
@@ -103,6 +105,7 @@ def analyze(
             inferred_role=role,
             confidence=conf,
             inference_reason=reason,
+            alternative_roles=alt_roles,
             null_count=int(q_info.get("null_count", 0)),
             nan_count=int(q_info.get("nan_count", 0)),
             empty_count=int(q_info.get("empty_count", 0)),
@@ -141,7 +144,15 @@ def analyze(
 
     key_candidates = find_key_candidates(columns, summary.row_count)
 
-    findings = evaluate_quality_rules(columns, duplicates, df=profiler.data)
+    findings = evaluate_quality_rules(
+        columns,
+        duplicates,
+        df=profiler.data,
+        allowed_negative_columns=(
+            config.allowed_negative_columns if config else None
+        ),
+        non_negative_columns=config.non_negative_columns if config else None,
+    )
     collinear_findings = evaluate_collinear_findings(correlations)
     findings.extend(collinear_findings)
 

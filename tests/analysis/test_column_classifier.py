@@ -104,3 +104,43 @@ def test_classify_columns_dataframe():
     assert classifications["payment_type"].inferred_role == "categorical"
     assert classifications["flag"].inferred_role == "boolean"
     assert classifications["city"].inferred_role == "categorical"
+
+
+def test_classify_user_role_overrides():
+    df = pl.DataFrame(
+        {
+            "user_id": [101, 102, 103],
+            "fare": [10.5, 20.0, 15.25],
+        }
+    )
+
+    overrides = {"user_id": "categorical", "fare": "text"}
+    classifications = classify_columns(df, column_roles=overrides)
+
+    assert classifications["user_id"].inferred_role == "categorical"
+    assert classifications["user_id"].confidence == 1.0
+    assert "User-specified override" in classifications["user_id"].reason
+
+    assert classifications["fare"].inferred_role == "text"
+    assert classifications["fare"].confidence == 1.0
+
+
+def test_classify_integer_valued_float_id():
+    # Floats that represent IDs due to nullability (e.g. 1001.0, 1002.0)
+    series = pl.Series("employee_id", [1001.0, 1002.0, 1003.0, 1004.0, 1005.0])
+    result = classify_column(series, 5)
+
+    assert result.inferred_role == "identifier"
+    assert "numeric" in result.alternative_roles
+
+
+def test_classify_discrete_vs_continuous_alternative_roles():
+    cont_series = pl.Series("temperature", [98.6, 99.1, 98.4, 100.2])
+    res_cont = classify_column(cont_series, 4)
+    assert res_cont.inferred_role == "numeric"
+    assert "continuous" in res_cont.alternative_roles
+
+    disc_series = pl.Series("item_count", [1, 5, 2, 8, 4])
+    res_disc = classify_column(disc_series, 5)
+    assert res_disc.inferred_role == "numeric"
+    assert "discrete" in res_disc.alternative_roles

@@ -144,7 +144,74 @@ def test_check_numeric_outliers():
     findings = check_numeric_outliers(cols, df)
     assert len(findings) == 1
     assert findings[0].affected_columns == ["metric"]
-    assert "Numeric outliers detected" in findings[0].title
+    assert "Distribution tail values" in findings[0].title
+    assert findings[0].severity == "info"
+
+
+def test_allowed_negative_columns_suppression():
+    cols = [
+        ColumnProfile(
+            name="fare_amount",
+            physical_type="Float64",
+            inferred_role="numeric",
+            statistics={"negatives_count": 15, "negatives_percentage": 1.5},
+        ),
+    ]
+
+    # Suppressed by configuration
+    findings = check_negative_values(
+        cols, allowed_negative_columns=["fare_amount"]
+    )
+    assert len(findings) == 0
+
+    # Unsuppressed
+    findings_unsuppressed = check_negative_values(cols)
+    assert len(findings_unsuppressed) == 1
+
+
+def test_non_negative_columns_strict():
+    cols = [
+        ColumnProfile(
+            name="custom_metric",
+            physical_type="Float64",
+            inferred_role="numeric",
+            statistics={"negatives_count": 5, "negatives_percentage": 2.0},
+        ),
+        ColumnProfile(
+            name="fare_amount",
+            physical_type="Float64",
+            inferred_role="numeric",
+            statistics={"negatives_count": 5, "negatives_percentage": 2.0},
+        ),
+    ]
+
+    # Strictly test custom_metric only
+    findings = check_negative_values(
+        cols, non_negative_columns=["custom_metric"]
+    )
+    assert len(findings) == 1
+    assert findings[0].affected_columns == ["custom_metric"]
+
+
+def test_check_chronology_inversion_dynamic_suffixes():
+    df = pl.DataFrame(
+        {
+            "task_dispatched": [
+                datetime(2025, 1, 1, 10, 0),
+                datetime(2025, 1, 1, 12, 0),
+            ],
+            "task_received": [
+                datetime(2025, 1, 1, 10, 30),
+                datetime(2025, 1, 1, 11, 0),  # Received before dispatched!
+            ],
+        }
+    )
+
+    findings = check_chronology_inversion(df)
+    assert len(findings) == 1
+    assert findings[0].severity == "critical"
+    assert findings[0].title == "Chronological inversion"
+    assert "task_received" in findings[0].affected_columns
 
 
 def test_check_chronology_inversion():

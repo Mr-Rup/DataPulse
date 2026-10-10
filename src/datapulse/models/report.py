@@ -60,6 +60,7 @@ class ColumnProfile:
     inferred_role: str = "unknown"
     confidence: float = 1.0
     inference_reason: str = ""
+    alternative_roles: list[str] = field(default_factory=list)
     null_count: int = 0
     nan_count: int = 0
     empty_count: int = 0

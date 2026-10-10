@@ -25,7 +25,6 @@ NON_NEGATIVE_KEYWORDS = (
     "weight",
     "volume",
     "speed",
-    "rate",
     "fee",
     "tip",
     "toll",
@@ -155,12 +154,44 @@ def check_high_cardinality(columns: list[ColumnProfile]) -> list[Finding]:
     return findings
 
 
-def check_negative_values(columns: list[ColumnProfile]) -> list[Finding]:
+def check_negative_values(
+    columns: list[ColumnProfile],
+    allowed_negative_columns: list[str] | None = None,
+    non_negative_columns: list[str] | None = None,
+) -> list[Finding]:
     """Check for unexpected negative numbers in conventionally non-negative columns."""
 
     findings: list[Finding] = []
+    allowed_set = set(allowed_negative_columns or [])
+
+    if non_negative_columns is not None:
+        target_cols = set(non_negative_columns) - allowed_set
+        for col in columns:
+            if col.name in target_cols and col.inferred_role in ("numeric", "discrete"):
+                neg_count = int(col.statistics.get("negatives_count", 0))
+                neg_pct = float(col.statistics.get("negatives_percentage", 0.0))
+                if neg_count > 0:
+                    findings.append(
+                        Finding(
+                            rule_id="unexpected_negatives",
+                            severity="warning",
+                            title="Unexpected negative values",
+                            description=(
+                                f"Column '{col.name}' contains {neg_count:,} "
+                                f"negative values ({neg_pct:.2f}%)."
+                            ),
+                            affected_columns=[col.name],
+                            affected_rows=neg_count,
+                            affected_percentage=neg_pct,
+                        )
+                    )
+        return findings
+
+    # Default heuristic checks
     for col in columns:
-        if col.inferred_role == "numeric":
+        if col.name in allowed_set:
+            continue
+        if col.inferred_role in ("numeric", "discrete"):
             name_lower = col.name.lower()
             if any(kw in name_lower for kw in NON_NEGATIVE_KEYWORDS):
                 neg_count = int(col.statistics.get("negatives_count", 0))
@@ -186,7 +217,8 @@ def check_negative_values(columns: list[ColumnProfile]) -> list[Finding]:
 def check_numeric_outliers(
     columns: list[ColumnProfile], df: pl.DataFrame | None
 ) -> list[Finding]:
-    """Check for extreme numerical outliers using Tukey IQR rule."""
+    """Identify distribution tail values using Tukey IQR rule as informative findings.
+    """
 
     if df is None:
         return []
@@ -216,16 +248,16 @@ def check_numeric_outliers(
                 outliers = int(((series < lower_bound) | (series > upper_bound)).sum())
                 if outliers > 0:
                     outlier_pct = round((outliers / total_rows) * 100, 2)
-                    severity = "warning" if outlier_pct > 5.0 else "info"
                     findings.append(
                         Finding(
                             rule_id="numeric_outliers",
-                            severity=severity,
-                            title="Numeric outliers detected",
+                            severity="info",
+                            title="Distribution tail values (IQR)",
                             description=(
-                                f"Column '{col.name}' has {outliers:,} values "
-                                f"({outlier_pct:.2f}%) outside IQR bounds "
-                                f"[{lower_bound:.2f}, {upper_bound:.2f}]."
+                                f"Column '{col.name}' has {outliers:,} observations "
+                                f"({outlier_pct:.2f}%) outside 1.5×IQR bounds "
+                                f"[{lower_bound:.2f}, {upper_bound:.2f}]. "
+                                "Common in heavy-tailed empirical distributions."
                             ),
                             affected_columns=[col.name],
                             affected_rows=outliers,
@@ -233,6 +265,18 @@ def check_numeric_outliers(
                         )
                     )
     return findings
+
+
+DYNAMIC_TEMPORAL_SUFFIX_PAIRS = (
+    ("_start", "_end"),
+    ("_begin", "_finish"),
+    ("_pickup", "_dropoff"),
+    ("_opened", "_closed"),
+    ("_created", "_updated"),
+    ("_dispatched", "_received"),
+    ("_departure", "_arrival"),
+    ("_in", "_out"),
+)
 
 
 def check_chronology_inversion(df: pl.DataFrame | None) -> list[Finding]:
@@ -243,8 +287,28 @@ def check_chronology_inversion(df: pl.DataFrame | None) -> list[Finding]:
 
     findings: list[Finding] = []
     cols_set = set(df.columns)
+    evaluated_pairs: set[tuple[str, str]] = set()
 
-    for start_name, end_name in CHRONOLOGY_PAIRS:
+    candidate_pairs: list[tuple[str, str]] = list(CHRONOLOGY_PAIRS)
+
+    # Dynamically match temporal sibling columns sharing a common prefix
+    temporal_cols = [c for c in df.columns if df[c].dtype.is_temporal()]
+    for col_a in temporal_cols:
+        col_a_lower = col_a.lower()
+        for start_sfx, end_sfx in DYNAMIC_TEMPORAL_SUFFIX_PAIRS:
+            if col_a_lower.endswith(start_sfx):
+                prefix = col_a[: len(col_a) - len(start_sfx)]
+                # Look for matching sibling
+                for col_b in temporal_cols:
+                    if col_b != col_a and col_b.lower() == f"{prefix.lower()}{end_sfx}":
+                        candidate_pairs.append((col_a, col_b))
+
+    for start_name, end_name in candidate_pairs:
+        pair_key = (start_name, end_name)
+        if pair_key in evaluated_pairs:
+            continue
+        evaluated_pairs.add(pair_key)
+
         if start_name in cols_set and end_name in cols_set:
             start_s = df[start_name]
             end_s = df[end_name]
@@ -283,6 +347,9 @@ def evaluate_quality_rules(
     columns: list[ColumnProfile],
     duplicates: DuplicateSummary,
     df: pl.DataFrame | None = None,
+    *,
+    allowed_negative_columns: list[str] | None = None,
+    non_negative_columns: list[str] | None = None,
 ) -> list[Finding]:
     """Run all automated data quality and anomaly rules."""
 
@@ -291,7 +358,13 @@ def evaluate_quality_rules(
     findings.extend(check_duplicates(duplicates))
     findings.extend(check_constant_columns(columns))
     findings.extend(check_high_cardinality(columns))
-    findings.extend(check_negative_values(columns))
+    findings.extend(
+        check_negative_values(
+            columns,
+            allowed_negative_columns=allowed_negative_columns,
+            non_negative_columns=non_negative_columns,
+        )
+    )
     findings.extend(check_numeric_outliers(columns, df))
     findings.extend(check_chronology_inversion(df))
 

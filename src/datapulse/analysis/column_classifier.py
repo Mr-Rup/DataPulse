@@ -1,4 +1,4 @@
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 import polars as pl
 
@@ -12,14 +12,29 @@ class ColumnClassification:
     inferred_role: str
     confidence: float
     reason: str
+    alternative_roles: list[str] = field(default_factory=list)
 
 
-def classify_column(series: pl.Series, total_rows: int) -> ColumnClassification:
+def classify_column(
+    series: pl.Series,
+    total_rows: int,
+    override_role: str | None = None,
+) -> ColumnClassification:
     """Infer the analytical role of a Polars Series."""
 
     name = series.name
     dtype = series.dtype
     name_lower = name.lower()
+
+    if override_role:
+        return ColumnClassification(
+            name=name,
+            physical_type=str(dtype),
+            inferred_role=override_role,
+            confidence=1.0,
+            reason="User-specified override in configuration",
+            alternative_roles=[],
+        )
 
     if total_rows == 0 or series.null_count() == total_rows:
         return ColumnClassification(
@@ -28,6 +43,7 @@ def classify_column(series: pl.Series, total_rows: int) -> ColumnClassification:
             inferred_role="other",
             confidence=0.5,
             reason="All null or empty column",
+            alternative_roles=[],
         )
 
     non_null = series.drop_nulls()
@@ -40,6 +56,7 @@ def classify_column(series: pl.Series, total_rows: int) -> ColumnClassification:
             inferred_role="constant",
             confidence=1.0,
             reason="Column contains only 1 distinct value",
+            alternative_roles=[],
         )
 
     if dtype == pl.Boolean:
@@ -49,6 +66,7 @@ def classify_column(series: pl.Series, total_rows: int) -> ColumnClassification:
             inferred_role="boolean",
             confidence=1.0,
             reason="Physical boolean data type",
+            alternative_roles=["categorical"],
         )
 
     if dtype.is_temporal():
@@ -58,19 +76,41 @@ def classify_column(series: pl.Series, total_rows: int) -> ColumnClassification:
             inferred_role="temporal",
             confidence=1.0,
             reason="Physical temporal data type",
+            alternative_roles=[],
         )
 
+    has_id_hint = (
+        name_lower.endswith("_id")
+        or name_lower.endswith("id")
+        or name_lower == "id"
+        or name_lower.endswith("_key")
+        or name_lower.endswith("key")
+        or name_lower.endswith("code")
+    )
+
+    cardinality_ratio = unique_count / total_rows if total_rows > 0 else 0.0
+
     if dtype.is_numeric():
-        if dtype.is_float():
+        # Check if float values are actually whole integers (e.g. 1001.0, 1002.0)
+        is_integer_valued = False
+        if dtype.is_float() and non_null.len() > 0:
+            finite = non_null.filter(non_null.is_finite())
+            if finite.len() > 0:
+                frac = (finite - finite.floor()).abs().max()
+                if frac == 0.0:
+                    is_integer_valued = True
+
+        if dtype.is_float() and not is_integer_valued:
             return ColumnClassification(
                 name=name,
                 physical_type=str(dtype),
                 inferred_role="numeric",
                 confidence=0.95,
                 reason="Continuous floating-point measurement",
+                alternative_roles=["continuous"],
             )
 
-        # Integer types
+        # Either physical integer or whole-number float
         if unique_count == 2:
             unique_vals = set(non_null.head(100).unique().to_list())
             if unique_vals.issubset({0, 1}):
@@ -79,26 +119,28 @@ def classify_column(series: pl.Series, total_rows: int) -> ColumnClassification:
                     physical_type=str(dtype),
                     inferred_role="boolean",
                     confidence=0.9,
-                    reason="Binary 0/1 integer indicator",
+                    reason="Binary 0/1 numeric indicator",
+                    alternative_roles=["categorical", "numeric"],
                 )
 
-        has_id_hint = (
-            name_lower.endswith("_id")
-            or name_lower.endswith("id")
-            or name_lower == "id"
-            or name_lower.endswith("_key")
-            or name_lower.endswith("key")
-            or name_lower.endswith("code")
-        )
-
         if has_id_hint:
+            if cardinality_ratio >= 0.8:
+                return ColumnClassification(
+                    name=name,
+                    physical_type=str(dtype),
+                    inferred_role="identifier",
+                    confidence=0.9,
+                    reason="Identifier naming hint with high distinctness",
+                    alternative_roles=["numeric"],
+                )
             if unique_count <= 20:
                 return ColumnClassification(
                     name=name,
                     physical_type=str(dtype),
                     inferred_role="categorical",
                     confidence=0.85,
-                    reason="Low-cardinality integer with code/identifier naming hint",
+                    reason="Low-cardinality discrete code/identifier",
+                    alternative_roles=["identifier", "numeric"],
                 )
             return ColumnClassification(
                 name=name,
@@ -106,17 +148,52 @@ def classify_column(series: pl.Series, total_rows: int) -> ColumnClassification:
                 inferred_role="identifier",
                 confidence=0.9,
                 reason="Identifier naming hint with moderate-to-high cardinality",
+                alternative_roles=["numeric"],
             )
 
-        cardinality_ratio = unique_count / total_rows if total_rows > 0 else 0.0
+        has_metric_hint = any(
+            hint in name_lower
+            for hint in (
+                "fare",
+                "amount",
+                "price",
+                "cost",
+                "total",
+                "fee",
+                "tip",
+                "units",
+                "revenue",
+                "count",
+                "qty",
+                "quantity",
+                "val",
+                "score",
+                "temp",
+                "speed",
+                "distance",
+                "rate",
+                "pct",
+                "percent",
+            )
+        )
 
-        if unique_count <= 20 and (cardinality_ratio < 0.05 or total_rows < 100):
+        has_code_hint = any(
+            hint in name_lower
+            for hint in ("type", "status", "mode", "class", "group", "category")
+        )
+
+        if (
+            (has_code_hint or not has_metric_hint)
+            and unique_count <= 20
+            and cardinality_ratio <= 0.5
+        ):
             return ColumnClassification(
                 name=name,
                 physical_type=str(dtype),
                 inferred_role="categorical",
-                confidence=0.8,
-                reason="Low-cardinality discrete integer values",
+                confidence=0.85 if has_code_hint else 0.8,
+                reason="Low-cardinality discrete numeric codes",
+                alternative_roles=["numeric", "discrete"],
             )
 
         if cardinality_ratio > 0.9 and total_rows > 100:
@@ -125,7 +202,8 @@ def classify_column(series: pl.Series, total_rows: int) -> ColumnClassification:
                 physical_type=str(dtype),
                 inferred_role="identifier",
                 confidence=0.85,
-                reason="Near-unique integer sequence",
+                reason="Near-unique numeric sequence",
+                alternative_roles=["numeric"],
             )
 
         return ColumnClassification(
@@ -133,26 +211,27 @@ def classify_column(series: pl.Series, total_rows: int) -> ColumnClassification:
             physical_type=str(dtype),
             inferred_role="numeric",
             confidence=0.9,
-            reason="Integer numeric measurement",
+            reason="Discrete numeric measurement",
+            alternative_roles=["discrete"],
         )
 
     if dtype in (pl.String, pl.Categorical, pl.Enum):
-        has_id_hint = (
+        has_str_id_hint = (
             name_lower.endswith("_id")
             or name_lower == "id"
             or name_lower.endswith("uuid")
             or name_lower.endswith("_key")
         )
-        if has_id_hint:
+        if has_str_id_hint:
             return ColumnClassification(
                 name=name,
                 physical_type=str(dtype),
                 inferred_role="identifier",
                 confidence=0.9,
                 reason="String identifier naming hint",
+                alternative_roles=["categorical"],
             )
 
-        cardinality_ratio = unique_count / total_rows if total_rows > 0 else 0.0
         if cardinality_ratio > 0.9 and total_rows > 100:
             return ColumnClassification(
                 name=name,
@@ -160,6 +239,7 @@ def classify_column(series: pl.Series, total_rows: int) -> ColumnClassification:
                 inferred_role="identifier",
                 confidence=0.85,
                 reason="High-uniqueness string column",
+                alternative_roles=["categorical"],
             )
 
         if dtype == pl.String and non_null.len() > 0:
@@ -172,6 +252,7 @@ def classify_column(series: pl.Series, total_rows: int) -> ColumnClassification:
                     inferred_role="text",
                     confidence=0.85,
                     reason="Long freeform text content",
+                    alternative_roles=["categorical"],
                 )
 
         return ColumnClassification(
@@ -180,6 +261,7 @@ def classify_column(series: pl.Series, total_rows: int) -> ColumnClassification:
             inferred_role="categorical",
             confidence=0.9,
             reason="Discrete string categories",
+            alternative_roles=[],
         )
 
     return ColumnClassification(
@@ -188,11 +270,22 @@ def classify_column(series: pl.Series, total_rows: int) -> ColumnClassification:
         inferred_role="other",
         confidence=0.5,
         reason=f"Unclassified physical type: {dtype}",
+        alternative_roles=[],
     )
 
 
-def classify_columns(df: pl.DataFrame) -> dict[str, ColumnClassification]:
+def classify_columns(
+    df: pl.DataFrame,
+    column_roles: dict[str, str] | None = None,
+) -> dict[str, ColumnClassification]:
     """Classify all columns in a Polars DataFrame into analytical roles."""
 
     total_rows = df.height
-    return {col: classify_column(df[col], total_rows) for col in df.columns}
+    return {
+        col: classify_column(
+            df[col],
+            total_rows,
+            override_role=column_roles.get(col) if column_roles else None,
+        )
+        for col in df.columns
+    }

@@ -44,6 +44,18 @@ class AnalysisConfig(BaseModel):
         ],
         description="String values treated as missing data in text columns",
     )
+    column_roles: dict[str, str] = Field(
+        default_factory=dict,
+        description="Explicit user overrides for column semantic roles",
+    )
+    allowed_negative_columns: list[str] = Field(
+        default_factory=list,
+        description="Columns allowed to have negative values without warnings",
+    )
+    non_negative_columns: list[str] | None = Field(
+        default=None,
+        description="Explicit columns strictly required to be non-negative",
+    )
     sheet_name: str | None = Field(
         default=None,
         description="Sheet name to read when profiling Excel files",
