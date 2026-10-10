@@ -118,11 +118,14 @@ def analyze(
 
     elapsed = round(time.perf_counter() - start_time, 4)
 
+    inc_full_path = config.include_full_path if config else False
+    src_path_str = str(path.resolve()) if inc_full_path else path.name
+
     metadata = ReportMetadata(
         datapulse_version=__version__,
         created_at=datetime.now(UTC).isoformat(),
         source_name=path.name,
-        source_path=str(path.resolve()),
+        source_path=src_path_str,
         file_size_mb=summary.file_size_mb,
         elapsed_seconds=elapsed,
     )

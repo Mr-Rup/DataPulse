@@ -77,3 +77,62 @@ def test_analysis_report_serialization():
     parsed = json.loads(json_str)
     assert parsed["schema_version"] == "1.0.0"
     assert parsed["summary"]["file_name"] == "sample.parquet"
+
+
+def test_analysis_report_rfc8259_compliance():
+    metadata = ReportMetadata(
+        datapulse_version="0.1.0",
+        created_at="2026-10-10T00:00:00Z",
+        source_name="nan_test.csv",
+        source_path="nan_test.csv",
+        file_size_mb=0.01,
+        elapsed_seconds=0.01,
+    )
+    summary = DatasetSummary(
+        file_name="nan_test.csv",
+        file_size_mb=0.01,
+        row_count=5,
+        column_count=1,
+        schema={"metric": "Float64"},
+    )
+    duplicates = DuplicateSummary(
+        total_rows=5,
+        unique_rows=5,
+        duplicate_rows=0,
+        duplicate_percentage=0.0,
+    )
+    columns = [
+        ColumnProfile(
+            name="metric",
+            physical_type="Float64",
+            inferred_role="numeric",
+            null_count=1,
+            missing_percentage=20.0,
+            unique_count=4,
+            statistics={
+                "mean": float("nan"),
+                "max": float("inf"),
+                "min": float("-inf"),
+                "regular": 42.0,
+            },
+        )
+    ]
+    report = AnalysisReport(
+        schema_version="1.0.0",
+        metadata=metadata,
+        summary=summary,
+        duplicates=duplicates,
+        columns=columns,
+    )
+
+    # Must produce strictly valid JSON without raw unquoted NaN or Infinity
+    json_str = report.to_json()
+    assert "NaN" not in json_str
+    assert "Infinity" not in json_str
+
+    parsed = json.loads(json_str)
+    stats = parsed["columns"][0]["statistics"]
+    assert stats["mean"] is None
+    assert stats["max"] is None
+    assert stats["min"] is None
+    assert stats["regular"] == 42.0

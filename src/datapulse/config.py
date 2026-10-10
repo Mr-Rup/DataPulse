@@ -69,6 +69,10 @@ class AnalysisConfig(BaseModel):
         default=None,
         description="Delimiter character for CSV files",
     )
+    include_full_path: bool = Field(
+        default=False,
+        description="Whether to include absolute file path in report metadata",
+    )
 
 
 def load_config(config_path: str | Path) -> AnalysisConfig:

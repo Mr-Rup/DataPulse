@@ -100,3 +100,20 @@ def test_analyze_excel(tmp_path):
     assert report.summary.file_name == "test.xlsx"
     assert report.summary.row_count == 2
     assert report.summary.column_count == 2
+
+
+def test_analyze_metadata_path_privacy(tmp_path):
+    csv_file = tmp_path / "privacy_test.csv"
+    csv_file.write_text("x,y\n1,2\n3,4\n", encoding="utf-8")
+
+    # Default: privacy preserved, full path omitted
+    report_default = analyze(csv_file)
+    assert report_default.metadata.source_path == "privacy_test.csv"
+
+    # Explicit opt-in: full system path included
+    from datapulse import AnalysisConfig
+
+    report_full = analyze(
+        csv_file, config=AnalysisConfig(include_full_path=True)
+    )
+    assert report_full.metadata.source_path == str(csv_file.resolve())

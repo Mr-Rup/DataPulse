@@ -1,4 +1,5 @@
 import json
+import math
 from dataclasses import asdict, dataclass, field
 from pathlib import Path
 from typing import Any
@@ -124,9 +125,13 @@ class AnalysisReport:
         return asdict(self)
 
     def to_json(self, indent: int = 2) -> str:
-        """Serialize the report to a JSON string."""
+        """Serialize the report to a valid RFC 8259 JSON string."""
 
-        return json.dumps(self.to_dict(), indent=indent)
+        sanitized = _sanitize_for_json(self.to_dict())
+        return json.dumps(
+            sanitized, indent=indent, allow_nan=False, ensure_ascii=False
+        )
+
 
     def save_json(self, output_path: str | Path, indent: int = 2) -> Path:
         """Save report to a JSON file."""
@@ -141,3 +146,17 @@ class AnalysisReport:
         from datapulse.reporting.html import export_html
 
         return export_html(self, output_path)
+
+
+def _sanitize_for_json(obj: Any) -> Any:
+    """Recursively replace non-finite float values with None for RFC 8259 compliance."""
+
+    if isinstance(obj, float):
+        if math.isnan(obj) or math.isinf(obj):
+            return None
+        return obj
+    if isinstance(obj, dict):
+        return {k: _sanitize_for_json(v) for k, v in obj.items()}
+    if isinstance(obj, list):
+        return [_sanitize_for_json(item) for item in obj]
+    return obj
