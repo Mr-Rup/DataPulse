@@ -30,6 +30,11 @@ class AnalysisConfig(BaseModel):
         le=1.0,
         description="Minimum absolute correlation threshold to record",
     )
+    max_correlation_columns: int = Field(
+        default=30,
+        gt=0,
+        description="Maximum numeric columns evaluated in pairwise correlation matrix",
+    )
     missing_sentinels: list[str] = Field(
         default_factory=lambda: [
             "NA",

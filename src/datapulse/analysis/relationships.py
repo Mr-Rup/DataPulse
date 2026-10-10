@@ -16,8 +16,9 @@ def compute_correlations(
     numeric_cols: list[str],
     method: Literal["pearson", "spearman"] = "pearson",
     min_threshold: float = 0.0,
+    max_correlation_columns: int = 30,
 ) -> list[CorrelationPair]:
-    """Compute pairwise numeric correlation coefficients."""
+    """Compute pairwise numeric correlation coefficients and joint sample sizes."""
 
     # Filter to numeric columns actually present in df with non-constant variance
     valid_cols: list[str] = []
@@ -30,23 +31,35 @@ def compute_correlations(
     if len(valid_cols) < 2 or df.height < 3:
         return []
 
+    # Safeguard against combinatorial explosion on high-dimensional datasets
+    if len(valid_cols) > max_correlation_columns:
+        # Prioritize columns with higher non-null completeness
+        valid_cols.sort(key=lambda c: df[c].null_count())
+        valid_cols = valid_cols[:max_correlation_columns]
+
     pairs: list[tuple[str, str]] = [
         (col_a, col_b)
         for i, col_a in enumerate(valid_cols)
         for col_b in valid_cols[i + 1 :]
     ]
 
-    exprs = [
-        pl.corr(col_a, col_b, method=method).alias(f"c_{idx}")
-        for idx, (col_a, col_b) in enumerate(pairs)
-    ]
+    exprs: list[pl.Expr] = []
+    for idx, (col_a, col_b) in enumerate(pairs):
+        exprs.append(pl.corr(col_a, col_b, method=method).alias(f"c_{idx}"))
+        exprs.append(
+            (pl.col(col_a).is_not_null() & pl.col(col_b).is_not_null())
+            .sum()
+            .alias(f"n_{idx}")
+        )
 
     results_df = df.select(exprs)
     results: list[CorrelationPair] = []
 
     for idx, (col_a, col_b) in enumerate(pairs):
         raw_val = results_df[f"c_{idx}"][0]
-        if isinstance(raw_val, (int, float)) and not math.isnan(raw_val):
+        n_obs = int(results_df[f"n_{idx}"][0] or 0)
+
+        if n_obs >= 2 and isinstance(raw_val, (int, float)) and not math.isnan(raw_val):
             coef = round(float(raw_val), 4)
             if abs(coef) >= min_threshold:
                 results.append(
@@ -55,6 +68,7 @@ def compute_correlations(
                         column_b=col_b,
                         coefficient=coef,
                         method=method,
+                        common_observations=n_obs,
                     )
                 )
 

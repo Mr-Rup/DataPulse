@@ -100,6 +100,27 @@ def test_read_source_rejects_empty_file(tmp_path):
         read_source(empty)
 
 
+def test_read_source_rejects_whitespace_only_file(tmp_path):
+    ws_file = tmp_path / "whitespace.json"
+    ws_file.write_text("   \n\n\t  ", encoding="utf-8")
+    with pytest.raises(ValueError, match="contains no data"):
+        read_source(ws_file)
+
+
+def test_read_source_corrupt_json_reports_error(tmp_path):
+    corrupt = tmp_path / "corrupt.json"
+    corrupt.write_text('[{"id": 1, "unclosed": }', encoding="utf-8")
+    with pytest.raises(ValueError, match="Failed to parse JSON file"):
+        read_source(corrupt)
+
+
+def test_read_source_invalid_json_leading_character(tmp_path):
+    invalid = tmp_path / "invalid.json"
+    invalid.write_text("not a json document", encoding="utf-8")
+    with pytest.raises(ValueError, match="Invalid JSON structure"):
+        read_source(invalid)
+
+
 def test_read_source_rejects_unsupported_extension(tmp_path):
     unsupported = tmp_path / "data.unsupported"
     unsupported.write_text("content", encoding="utf-8")

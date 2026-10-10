@@ -24,6 +24,31 @@ class SourceInfo:
     file_size_mb: float
 
 
+def _sniff_json_format(path: Path) -> str:
+    """Inspect leading bytes to determine whether a JSON file is standard
+    JSON or NDJSON.
+    """
+
+    with open(path, "rb") as f:
+        chunk = f.read(4096).strip()
+        if not chunk:
+            raise ValueError(f"Dataset file contains no data: {path}")
+
+        first_char = chr(chunk[0])
+        if first_char == "[":
+            return "json"
+        if first_char == "{":
+            lines = chunk.splitlines()
+            if len(lines) > 1 and lines[1].strip().startswith(b"{"):
+                return "ndjson"
+            return "json"
+
+        raise ValueError(
+            f"Invalid JSON structure in '{path.name}': "
+            f"must begin with '[' or '{{', found '{first_char}'."
+        )
+
+
 def read_source(
     file_path: str | Path,
     *,
@@ -70,9 +95,19 @@ def read_source(
             if suffix in (".ndjson", ".jsonl"):
                 lazy_frame = pl.scan_ndjson(path)
             else:
-                try:
-                    lazy_frame = pl.read_json(path).lazy()
-                except Exception:
+                json_type = _sniff_json_format(path)
+                if json_type == "json":
+                    try:
+                        lazy_frame = pl.read_json(path).lazy()
+                    except Exception as json_err:
+                        try:
+                            lazy_frame = pl.scan_ndjson(path)
+                            _ = lazy_frame.collect_schema()
+                        except Exception:
+                            raise ValueError(
+                                f"Failed to parse JSON file '{path.name}': {json_err}"
+                            ) from json_err
+                else:
                     lazy_frame = pl.scan_ndjson(path)
         elif file_format == "excel":
             if sheet_name is not None:

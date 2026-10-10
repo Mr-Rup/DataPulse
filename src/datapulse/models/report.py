@@ -91,6 +91,7 @@ class CorrelationPair:
     column_b: str
     coefficient: float
     method: str = "pearson"
+    common_observations: int = 0
 
 
 @dataclass

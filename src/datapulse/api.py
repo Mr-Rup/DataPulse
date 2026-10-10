@@ -133,11 +133,13 @@ def analyze(
         min_threshold = config.min_correlation if config else 0.50
         method_literal = "spearman" if corr_method == "spearman" else "pearson"
         numeric_col_names = [c.name for c in columns if c.inferred_role == "numeric"]
+        max_corr_cols = config.max_correlation_columns if config else 30
         correlations = compute_correlations(
             profiler.data,
             numeric_col_names,
             method=method_literal,
             min_threshold=min_threshold,
+            max_correlation_columns=max_corr_cols,
         )
     else:
         correlations = []

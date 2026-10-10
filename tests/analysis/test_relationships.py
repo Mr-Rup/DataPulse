@@ -46,6 +46,34 @@ def test_compute_correlations_small_dataset():
     assert compute_correlations(df, ["a", "b"]) == []
 
 
+def test_compute_correlations_max_columns_safeguard():
+    # 6 numeric columns -> Normally 15 pairs
+    data = {f"col_{i}": [float(j * (i + 1)) for j in range(10)] for i in range(6)}
+    df = pl.DataFrame(data)
+
+    # With max_correlation_columns=3 -> At most 3 choose 2 = 3 pairs
+    pairs = compute_correlations(
+        df,
+        list(data.keys()),
+        max_correlation_columns=3,
+    )
+    assert len(pairs) == 3
+
+
+def test_compute_correlations_common_observations():
+    df = pl.DataFrame(
+        {
+            "x": [1.0, 2.0, None, 4.0, 5.0],
+            "y": [10.0, None, 30.0, 40.0, 50.0],
+        }
+    )
+
+    pairs = compute_correlations(df, ["x", "y"])
+    assert len(pairs) == 1
+    # Only rows 0, 3, 4 are jointly non-null
+    assert pairs[0].common_observations == 3
+
+
 def test_find_key_candidates():
     cols = [
         ColumnProfile(

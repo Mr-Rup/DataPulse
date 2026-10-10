@@ -287,6 +287,7 @@ def display_report(report: AnalysisReport) -> None:
         corr_table.add_column("Column A")
         corr_table.add_column("Column B")
         corr_table.add_column("Correlation (r)", justify="right")
+        corr_table.add_column("Pairs (N)", justify="right")
         corr_table.add_column("Method")
         corr_table.add_column("Strength")
 
@@ -305,10 +306,16 @@ def display_report(report: AnalysisReport) -> None:
                 strength = "Weak"
                 color = "white"
 
+            n_str = (
+                f"{pair.common_observations:,}"
+                if pair.common_observations > 0
+                else "-"
+            )
             corr_table.add_row(
                 pair.column_a,
                 pair.column_b,
                 f"[{color}]{pair.coefficient:+.4f}[/{color}]",
+                n_str,
                 pair.method,
                 strength,
             )
