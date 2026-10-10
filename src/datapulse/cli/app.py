@@ -9,6 +9,7 @@ from typing import Annotated
 
 import rich
 import typer
+from typer.core import TyperGroup
 
 from datapulse import __version__
 from datapulse.api import analyze
@@ -19,7 +20,21 @@ from datapulse.reporting.terminal import display_report
 # APPLICATION SETUP & GLOBAL CALLBACKS
 # =========================================================================
 
+class DefaultTyperGroup(TyperGroup):
+    """Command group defaulting to 'analyze' when file is passed directly."""
+
+    def resolve_command(self, ctx, args):
+        if not args:
+            return super().resolve_command(ctx, args)
+        cmd_name = args[0]
+        if cmd_name not in self.commands and not cmd_name.startswith("-"):
+            cmd = self.get_command(ctx, "analyze")
+            return "analyze", cmd, args
+        return super().resolve_command(ctx, args)
+
+
 app = typer.Typer(
+    cls=DefaultTyperGroup,
     name="datapulse",
     help="Automated tabular exploratory data analysis (EDA) toolkit.",
     add_completion=False,
@@ -83,6 +98,20 @@ def run_analyze(
             help="Path to save report output (.html or .json).",
         ),
     ] = None,
+    html: Annotated[
+        bool,
+        typer.Option(
+            "--html",
+            help="Quick export interactive HTML dashboard.",
+        ),
+    ] = False,
+    json: Annotated[
+        bool,
+        typer.Option(
+            "--json",
+            help="Quick export machine-readable JSON report.",
+        ),
+    ] = False,
     config: Annotated[
         Path | None,
         typer.Option(
@@ -133,13 +162,23 @@ def run_analyze(
     ] = False,
 ) -> None:
     """Analyze a dataset and generate an automated EDA report."""
+    # Resolve output format: quick flags -> extension auto-detection -> explicit option
     fmt = format.lower()
+    if html:
+        fmt = "html"
+    elif json:
+        fmt = "json"
+    elif output and fmt == "terminal":
+        suffix = output.suffix.lower()
+        if suffix == ".html":
+            fmt = "html"
+        elif suffix == ".json":
+            fmt = "json"
     if fmt not in ("terminal", "html", "json"):
         raise typer.BadParameter(
             f"Invalid format '{format}'. Supported formats: terminal, html, json"
         )
-
-    # 1. Base configuration loading
+    # Load configuration from file or defaults
     if config:
         try:
             cfg = load_config(config)
@@ -148,8 +187,7 @@ def run_analyze(
             raise typer.Exit(code=1) from exc
     else:
         cfg = AnalysisConfig()
-
-    # 2. CLI flag overrides
+    # Apply CLI flag overrides to configuration
     overrides: dict[str, object] = {}
     if max_categories is not None:
         overrides["max_categories"] = max_categories
@@ -159,18 +197,15 @@ def run_analyze(
         overrides["sheet_name"] = sheet_name
     if separator is not None:
         overrides["separator"] = separator
-
     if overrides:
         cfg = cfg.model_copy(update=overrides)
-
-    # 3. Execution pipeline
+    # Execute analysis pipeline
     try:
         report = analyze(file_path, config=cfg)
     except Exception as exc:
         rich.print(f"[bold red]Analysis error:[/bold red] {exc}")
         raise typer.Exit(code=1) from exc
-
-    # 4. Multi-format rendering and export
+    # Multi-format rendering and export
     if fmt == "terminal":
         if not quiet:
             display_report(report)
@@ -181,13 +216,11 @@ def run_analyze(
                 report.save_json(output)
             if not quiet:
                 rich.print(f"[green]Report saved to {output}[/green]")
-
     elif fmt == "html":
         out_path = output if output else Path(f"{file_path.stem}_report.html")
         report.save_html(out_path)
         if not quiet:
             rich.print(f"[green]Saved HTML report to {out_path}[/green]")
-
     elif fmt == "json":
         if output:
             report.save_json(output)
@@ -227,6 +260,20 @@ def run_profile(
             help="Path to save report output (.html or .json).",
         ),
     ] = None,
+    html: Annotated[
+        bool,
+        typer.Option(
+            "--html",
+            help="Quick export interactive HTML dashboard.",
+        ),
+    ] = False,
+    json: Annotated[
+        bool,
+        typer.Option(
+            "--json",
+            help="Quick export machine-readable JSON report.",
+        ),
+    ] = False,
     config: Annotated[
         Path | None,
         typer.Option(
@@ -253,6 +300,8 @@ def run_profile(
         file_path=file_path,
         format=format,
         output=output,
+        html=html,
+        json=json,
         config=config,
         quiet=quiet,
     )

@@ -8,6 +8,8 @@ import time
 from datetime import UTC, datetime
 from pathlib import Path
 
+import polars as pl
+
 from datapulse import __version__
 from datapulse.analysis.column_classifier import classify_columns
 from datapulse.analysis.quality_rules import evaluate_quality_rules
@@ -16,7 +18,7 @@ from datapulse.analysis.relationships import (
     evaluate_collinear_findings,
     find_key_candidates,
 )
-from datapulse.config import AnalysisConfig
+from datapulse.config import AnalysisConfig, load_config
 from datapulse.models.report import (
     AnalysisReport,
     ColumnProfile,
@@ -32,31 +34,45 @@ from datapulse.profiling.profiler import DatasetProfiler
 # =========================================================================
 
 def analyze(
-    file_path: str | Path,
-    config: AnalysisConfig | None = None,
+    file_path: str | Path | pl.DataFrame | pl.LazyFrame,
+    config: AnalysisConfig | str | Path | None = None,
 ) -> AnalysisReport:
     """Analyze a tabular dataset and produce a fully populated AnalysisReport."""
     start_time = time.perf_counter()
-    path = Path(file_path)
-
-    # -------------------------------------------------------------------------
-    # Dataset Profiling & Overview Extraction
-    # -------------------------------------------------------------------------
+    # Resolve configuration options from object, file path, or defaults
+    if config is None:
+        cfg = AnalysisConfig()
+    elif isinstance(config, (str, Path)):
+        cfg = load_config(config)
+    elif isinstance(config, AnalysisConfig):
+        cfg = config
+    else:
+        raise TypeError(
+            f"Invalid config type '{type(config).__name__}'. "
+            "Expected AnalysisConfig, str, Path, or None."
+        )
+    # Determine source display name and resolution path
+    if isinstance(file_path, (str, Path)):
+        src_path = Path(file_path)
+        source_name = src_path.name
+        source_path_str = (
+            str(src_path.resolve()) if cfg.include_full_path else src_path.name
+        )
+    else:
+        source_name = "in_memory_dataframe"
+        source_path_str = "memory"
+    # Execute single-pass parallel profiling
     profiler = DatasetProfiler(
-        path,
-        sheet_name=config.sheet_name if config else None,
-        separator=config.separator if config else None,
+        file_path,
+        sheet_name=cfg.sheet_name,
+        separator=cfg.separator,
     )
-
-    sentinels = config.missing_sentinels if config else None
+    sentinels = cfg.missing_sentinels
     overview = profiler.get_overview()
     missing_df = profiler.get_missing_values(sentinels=sentinels)
     duplicate_dict = profiler.get_duplicate_summary()
     quality_df = profiler.get_column_quality(sentinels=sentinels)
-
-    # -------------------------------------------------------------------------
     # Structural & Missingness Summaries
-    # -------------------------------------------------------------------------
     summary = DatasetSummary(
         file_name=overview["file_name"],
         file_size_mb=overview["file_size_mb"],
@@ -88,13 +104,10 @@ def analyze(
 
     quality_map = {row["column"]: row for row in quality_df.iter_rows(named=True)}
 
-    # -------------------------------------------------------------------------
     # Column Classification & Role-Specific Profiling
-    # -------------------------------------------------------------------------
-    column_roles = config.column_roles if config else None
+    column_roles = cfg.column_roles
     classifications = classify_columns(profiler.data, column_roles=column_roles)
-    max_categories = config.max_categories if config else 20
-
+    max_categories = cfg.max_categories
     columns: list[ColumnProfile] = []
     for col_name, dtype_str in overview["schema"].items():
         q_info = quality_map.get(col_name, {})
@@ -107,14 +120,12 @@ def analyze(
         conf = classification.confidence if classification else 1.0
         reason = classification.reason if classification else ""
         alt_roles = classification.alternative_roles if classification else []
-
         stats = profiler.profile_column(
             col_name,
             role=role,
             max_categories=max_categories,
             sentinels=sentinels,
         )
-
         profile = ColumnProfile(
             name=col_name,
             physical_type=dtype_str,
@@ -131,30 +142,23 @@ def analyze(
             statistics=stats,
         )
         columns.append(profile)
-
     elapsed = round(time.perf_counter() - start_time, 4)
-    inc_full_path = config.include_full_path if config else False
-    src_path_str = str(path.resolve()) if inc_full_path else path.name
-
     metadata = ReportMetadata(
         datapulse_version=__version__,
         created_at=datetime.now(UTC).isoformat(),
-        source_name=path.name,
-        source_path=src_path_str,
+        source_name=source_name,
+        source_path=source_path_str,
         file_size_mb=summary.file_size_mb,
         elapsed_seconds=elapsed,
     )
-
-    # -------------------------------------------------------------------------
     # Correlation & Primary Key Discovery
-    # -------------------------------------------------------------------------
-    compute_corr = config.compute_correlations if config else True
+    compute_corr = cfg.compute_correlations
     if compute_corr:
-        corr_method = config.correlation_method if config else "pearson"
-        min_threshold = config.min_correlation if config else 0.50
+        corr_method = cfg.correlation_method
+        min_threshold = cfg.min_correlation
         method_literal = "spearman" if corr_method == "spearman" else "pearson"
         numeric_col_names = [c.name for c in columns if c.inferred_role == "numeric"]
-        max_corr_cols = config.max_correlation_columns if config else 30
+        max_corr_cols = cfg.max_correlation_columns
         correlations = compute_correlations(
             profiler.data,
             numeric_col_names,
@@ -164,20 +168,14 @@ def analyze(
         )
     else:
         correlations = []
-
     key_candidates = find_key_candidates(columns, summary.row_count)
-
-    # -------------------------------------------------------------------------
     # Quality Rules Evaluation & Report Assembly
-    # -------------------------------------------------------------------------
     findings = evaluate_quality_rules(
         columns,
         duplicates,
         df=profiler.data,
-        allowed_negative_columns=(
-            config.allowed_negative_columns if config else None
-        ),
-        non_negative_columns=config.non_negative_columns if config else None,
+        allowed_negative_columns=cfg.allowed_negative_columns,
+        non_negative_columns=cfg.non_negative_columns,
     )
     collinear_findings = evaluate_collinear_findings(correlations)
     findings.extend(collinear_findings)

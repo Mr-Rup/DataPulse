@@ -70,6 +70,29 @@ class TestPublicApiPipeline:
         )
         assert rep_full.metadata.source_path == str(realistic_csv_path)
 
+    def test_analyze_in_memory_dataframe(self):
+        # In-memory Polars DataFrame analysis
+        df = pl.DataFrame(
+            {
+                "user_id": [1, 2, 3, 4],
+                "score": [10.5, 20.0, 30.5, 40.0],
+                "status": ["active", "pending", "active", "deleted"],
+            }
+        )
+        report = analyze(df)
+        assert report.summary.row_count == 4
+        assert report.summary.column_count == 3
+        assert report.metadata.source_name == "in_memory_dataframe"
+        assert report.metadata.source_path == "memory"
+
+    def test_analyze_config_from_file_path(self, realistic_csv_path: Path, tmp_path: Path):
+        # Configuration file path string passed to analyze()
+        conf_file = tmp_path / "custom_config.toml"
+        conf_file.write_text("max_categories = 5\ncompute_correlations = false\n", encoding="utf-8")
+        report = analyze(realistic_csv_path, config=str(conf_file))
+        assert report.summary.row_count == 50
+        assert len(report.correlations) == 0
+
 
 # =========================================================================
 # PUBLIC API INPUT VALIDATION
@@ -81,8 +104,11 @@ class TestPublicApiValidation:
     def test_rejects_missing_or_unsupported(self, tmp_path: Path):
         with pytest.raises(FileNotFoundError):
             analyze(tmp_path / "nonexistent.parquet")
-
         txt_file = tmp_path / "sample.unsupported"
         txt_file.write_text("a,b\n1,2\n", encoding="utf-8")
         with pytest.raises(ValueError):
             analyze(txt_file)
+
+    def test_rejects_invalid_config_type(self, realistic_csv_path: Path):
+        with pytest.raises(TypeError, match="Invalid config type"):
+            analyze(realistic_csv_path, config=123)  # type: ignore

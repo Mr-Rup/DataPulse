@@ -91,12 +91,50 @@ class TestCommandLineInterface:
         # Profile alias with --quiet
         res_prof = runner.invoke(app, ["profile", str(realistic_csv_path), "--quiet"])
         assert res_prof.exit_code == 0
-
         # Invalid format rejection
         res_inv = runner.invoke(
             app, ["analyze", str(realistic_csv_path), "--format", "xml"]
         )
         assert res_inv.exit_code != 0
+
+    def test_cli_default_root_execution_and_smart_detection(
+        self, realistic_csv_path: Path, tmp_path: Path
+    ):
+        # 1. Root execution without typing 'analyze'
+        res_root = runner.invoke(app, [str(realistic_csv_path)])
+        assert res_root.exit_code == 0
+        assert "Dataset Overview" in res_root.stdout
+        # 2. Smart auto-detection of format from -o .html
+        html_out = tmp_path / "auto_detected.html"
+        res_auto_html = runner.invoke(
+            app, [str(realistic_csv_path), "-o", str(html_out)]
+        )
+        assert res_auto_html.exit_code == 0
+        assert html_out.exists()
+        assert "<!DOCTYPE html>" in html_out.read_text(encoding="utf-8")
+        # 3. Smart auto-detection of format from -o .json
+        json_out = tmp_path / "auto_detected.json"
+        res_auto_json = runner.invoke(
+            app, [str(realistic_csv_path), "-o", str(json_out)]
+        )
+        assert res_auto_json.exit_code == 0
+        assert json_out.exists()
+
+    def test_cli_quick_export_shortcut_flags(
+        self, realistic_csv_path: Path, tmp_path: Path
+    ):
+        # Quick --html flag
+        html_target = tmp_path / "quick_dashboard.html"
+        res_html = runner.invoke(
+            app, [str(realistic_csv_path), "--html", "-o", str(html_target)]
+        )
+        assert res_html.exit_code == 0
+        assert html_target.exists()
+        # Quick --json flag (stdout)
+        res_json = runner.invoke(app, [str(realistic_csv_path), "--json"])
+        assert res_json.exit_code == 0
+        parsed = json.loads(res_json.stdout)
+        assert parsed["schema_version"] == "1.0.0"
 
 
 # =========================================================================

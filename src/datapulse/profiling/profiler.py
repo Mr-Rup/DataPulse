@@ -25,15 +25,17 @@ class DatasetProfiler:
 
     def __init__(
         self,
-        file_path: str | Path,
+        file_path: str | Path | pl.DataFrame | pl.LazyFrame,
         *,
         sheet_name: str | None = None,
         separator: str | None = None,
     ) -> None:
         """Initialize profiler by lazily reading dataset and collecting to memory."""
-        self.file_path = Path(file_path)
+        self.file_path = (
+            file_path if isinstance(file_path, (str, Path)) else Path("memory")
+        )
         self.lazy_data, self.source_info = read_source(
-            self.file_path,
+            file_path,
             sheet_name=sheet_name,
             separator=separator,
         )

@@ -124,17 +124,36 @@ def _sniff_json_format(path: Path) -> str:
 # =========================================================================
 
 def read_source(
-    file_path: str | Path,
+    file_path: str | Path | pl.DataFrame | pl.LazyFrame,
     *,
     sheet_name: str | None = None,
     separator: str | None = None,
 ) -> tuple[pl.LazyFrame, SourceInfo]:
-    """Read a tabular dataset from disk as a Polars LazyFrame with validation."""
+    """Read dataset from disk or memory as a Polars LazyFrame with validation."""
+    if isinstance(file_path, pl.DataFrame):
+        if file_path.is_empty() and file_path.width == 0:
+            raise ValueError(
+                "Dataset DataFrame is completely empty (no rows or columns)."
+            )
+        source_info = SourceInfo(
+            file_path=Path("memory"),
+            file_name="in_memory_dataframe",
+            file_format="dataframe",
+            file_size_mb=round(file_path.estimated_size() / (1024**2), 2),
+        )
+        return file_path.lazy(), source_info
+    if isinstance(file_path, pl.LazyFrame):
+        source_info = SourceInfo(
+            file_path=Path("memory"),
+            file_name="in_memory_lazyframe",
+            file_format="lazyframe",
+            file_size_mb=0.0,
+        )
+        _ = file_path.collect_schema()
+        return file_path, source_info
     path = Path(file_path)
-
     if not path.exists():
         raise FileNotFoundError(f"Dataset not found: {path}")
-
     if not path.is_file():
         raise ValueError(f"Path is not a regular file: {path}")
 
