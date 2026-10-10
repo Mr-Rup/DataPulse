@@ -1,6 +1,6 @@
-# =============================================================================
+# =========================================================================
 # Unit & Scenario Tests: Column Classification
-# =============================================================================
+# =========================================================================
 
 from datetime import datetime
 
@@ -11,10 +11,9 @@ from datapulse.analysis.column_classifier import (
     classify_columns,
 )
 
-# =============================================================================
-# 1. PHYSICAL & INVARIANT CLASSIFICATION
-# =============================================================================
-
+# =========================================================================
+# PHYSICAL & INVARIANT CLASSIFICATION
+# =========================================================================
 
 class TestPhysicalAndInvariantClassification:
     """Validate physical data types and invariant columns (nulls, constants, booleans)."""
@@ -48,10 +47,9 @@ class TestPhysicalAndInvariantClassification:
         assert res_date.confidence == 1.0
 
 
-# =============================================================================
-# 2. SEMANTIC CLASSIFICATION ON REALISTIC DATA
-# =============================================================================
-
+# =========================================================================
+# SEMANTIC CLASSIFICATION ON REALISTIC DATA
+# =========================================================================
 
 class TestSemanticClassification:
     """Validate heuristic role inference on realistic multifaceted dataset columns."""
@@ -93,10 +91,9 @@ class TestSemanticClassification:
         assert res_cst.inferred_role == "constant"
 
 
-# =============================================================================
-# 3. OVERRIDES & BATCH DATAFRAME INFERENCE
-# =============================================================================
-
+# =========================================================================
+# OVERRIDES & BATCH DATAFRAME INFERENCE
+# =========================================================================
 
 class TestClassificationOverridesAndBatch:
     """Validate user configuration overrides and full DataFrame batch classification."""

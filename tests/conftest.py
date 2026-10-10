@@ -1,10 +1,9 @@
-# =============================================================================
+# =========================================================================
 # DataPulse Test Suite Fixtures (conftest.py)
-# =============================================================================
 # Canonical, multi-column realistic test fixtures representing complex
 # real-world data distributions (continuous, discrete, float IDs, booleans,
 # temporal pairs, diverse missingness tokens, outliers, and duplicates).
-# =============================================================================
+# =========================================================================
 
 from datetime import datetime, timedelta
 from pathlib import Path
@@ -12,22 +11,13 @@ from pathlib import Path
 import polars as pl
 import pytest
 
+# =========================================================================
+# IN-MEMORY REALISTIC DATASET FIXTURES
+# =========================================================================
 
 @pytest.fixture
 def realistic_tabular_df() -> pl.DataFrame:
-    """Generate a realistic 50-row DataFrame with multifaceted data patterns:
-    - Continuous numeric measurements (including negatives and tail outliers)
-    - Discrete coded integers (low-cardinality codes)
-    - Float identifiers (1001.0 .. 1050.0)
-    - High-cardinality unique integer IDs
-    - Low-cardinality categorical strings
-    - Native Boolean flags and integer binary indicators (0/1)
-    - Free-form text descriptions
-    - Paired temporal timestamps (with an intentional chronological inversion)
-    - Unified missingness (nulls, NaNs, empty strings, whitespace, sentinels)
-    - Exact duplicate rows
-    - All-constant column
-    """
+    """Generate a realistic 50-row DataFrame with multifaceted data patterns."""
     row_count = 48  # plus 2 duplicates makes 50 rows
     base_time = datetime(2025, 1, 1, 10, 0, 0)
 
@@ -97,6 +87,10 @@ def realistic_tabular_df() -> pl.DataFrame:
     dup_rows = df.slice(0, 2)
     return pl.concat([df, dup_rows])
 
+
+# =========================================================================
+# PERSISTED FILE FIXTURES
+# =========================================================================
 
 @pytest.fixture
 def realistic_csv_path(tmp_path: Path, realistic_tabular_df: pl.DataFrame) -> Path:

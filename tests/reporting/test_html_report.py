@@ -1,6 +1,6 @@
-# =============================================================================
+# =========================================================================
 # Unit & Scenario Tests: HTML Report Rendering & Multi-Format Exporters
-# =============================================================================
+# =========================================================================
 
 import json
 from pathlib import Path
@@ -8,10 +8,9 @@ from pathlib import Path
 from datapulse import analyze, export_html, export_json
 from datapulse.reporting.html import generate_html_report
 
-# =============================================================================
-# 1. HTML REPORT RENDERING & EXPORTERS
-# =============================================================================
-
+# =========================================================================
+# HTML REPORT RENDERING & EXPORTERS
+# =========================================================================
 
 class TestHtmlReportRendering:
     """Validate HTML generation, XSS safety, and file export helpers."""

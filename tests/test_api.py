@@ -1,6 +1,6 @@
-# =============================================================================
+# =========================================================================
 # Unit & Scenario Tests: Public API Pipeline (analyze)
-# =============================================================================
+# =========================================================================
 
 from pathlib import Path
 
@@ -11,10 +11,9 @@ from datapulse import __version__, analyze
 from datapulse.config import AnalysisConfig
 from datapulse.models.report import AnalysisReport
 
-# =============================================================================
-# 1. PUBLIC API END-TO-END PIPELINE
-# =============================================================================
-
+# =========================================================================
+# PUBLIC API END-TO-END PIPELINE
+# =========================================================================
 
 class TestPublicApiPipeline:
     """Validate end-to-end analyze() execution across file formats and in-memory frames."""
@@ -72,10 +71,9 @@ class TestPublicApiPipeline:
         assert rep_full.metadata.source_path == str(realistic_csv_path)
 
 
-# =============================================================================
-# 2. PUBLIC API INPUT VALIDATION
-# =============================================================================
-
+# =========================================================================
+# PUBLIC API INPUT VALIDATION
+# =========================================================================
 
 class TestPublicApiValidation:
     """Validate API exception raising for missing or unsupported inputs."""

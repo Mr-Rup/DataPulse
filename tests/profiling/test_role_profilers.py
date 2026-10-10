@@ -1,6 +1,6 @@
-# =============================================================================
+# =========================================================================
 # Unit & Scenario Tests: Role-Specific Statistical Profilers
-# =============================================================================
+# =========================================================================
 
 from datetime import datetime
 
@@ -15,10 +15,9 @@ from datapulse.profiling.numeric import profile_numeric
 from datapulse.profiling.temporal import profile_temporal
 from datapulse.profiling.text import profile_text
 
-# =============================================================================
-# 1. ROLE-SPECIFIC STATISTICAL EXTRACTORS
-# =============================================================================
-
+# =========================================================================
+# ROLE-SPECIFIC STATISTICAL EXTRACTORS
+# =========================================================================
 
 class TestRoleSpecificProfilers:
     """Validate statistics calculation for numeric, categorical, temporal, boolean, text, and IDs."""
@@ -91,10 +90,9 @@ class TestRoleSpecificProfilers:
         assert id_stats["duplicate_count"] == 1
 
 
-# =============================================================================
-# 2. DISPATCHER & END-TO-END PROFILING
-# =============================================================================
-
+# =========================================================================
+# DISPATCHER & END-TO-END PROFILING
+# =========================================================================
 
 class TestColumnProfilerDispatcher:
     """Validate dynamic role-based dispatcher and integrated profiling."""

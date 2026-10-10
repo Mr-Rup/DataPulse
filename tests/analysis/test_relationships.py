@@ -1,6 +1,6 @@
-# =============================================================================
+# =========================================================================
 # Unit & Scenario Tests: Relationships & Primary Key Discovery
-# =============================================================================
+# =========================================================================
 
 import polars as pl
 import pytest
@@ -13,10 +13,9 @@ from datapulse.analysis.relationships import (
 )
 from datapulse.models.report import ColumnProfile, CorrelationPair
 
-# =============================================================================
-# 1. CORRELATION ANALYSIS & SAFEGUARDS
-# =============================================================================
-
+# =========================================================================
+# CORRELATION ANALYSIS & SAFEGUARDS
+# =========================================================================
 
 class TestCorrelationAnalysis:
     """Validate Pearson/Spearman computation, safeguards, and collinearity alerts."""
@@ -77,10 +76,9 @@ class TestCorrelationAnalysis:
         assert findings[0].affected_columns == ["fare", "total"]
 
 
-# =============================================================================
-# 2. PRIMARY KEY CANDIDATE DISCOVERY
-# =============================================================================
-
+# =========================================================================
+# PRIMARY KEY CANDIDATE DISCOVERY
+# =========================================================================
 
 class TestKeyCandidateDiscovery:
     """Validate primary key heuristic identification and end-to-end integration."""

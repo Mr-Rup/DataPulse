@@ -1,6 +1,6 @@
-# =============================================================================
+# =========================================================================
 # Unit & Scenario Tests: Dataset Ingestion & Format Readers
-# =============================================================================
+# =========================================================================
 
 from pathlib import Path
 
@@ -9,10 +9,9 @@ import pytest
 
 from datapulse.ingestion.readers import read_source
 
-# =============================================================================
-# 1. CORE TABULAR FORMAT READERS
-# =============================================================================
-
+# =========================================================================
+# CORE TABULAR FORMAT READERS
+# =========================================================================
 
 class TestTabularFormatReaders:
     """Validate standard ingestion across supported tabular formats."""
@@ -65,10 +64,9 @@ class TestTabularFormatReaders:
         assert "LocationID" in collected.columns
 
 
-# =============================================================================
-# 2. DELIMITERS, LINE TERMINATORS & ENCODING RESILIENCE
-# =============================================================================
-
+# =========================================================================
+# DELIMITERS, LINE TERMINATORS & ENCODING RESILIENCE
+# =========================================================================
 
 class TestDelimitersAndEncodingResilience:
     """Validate delimiter auto-sniffing, legacy CR line endings, and encoding fallbacks."""
@@ -137,10 +135,9 @@ class TestDelimitersAndEncodingResilience:
         assert "MEDV" in collected.columns
 
 
-# =============================================================================
-# 3. INGESTION VALIDATION & ERROR HANDLING
-# =============================================================================
-
+# =========================================================================
+# INGESTION VALIDATION & ERROR HANDLING
+# =========================================================================
 
 class TestIngestionValidation:
     """Validate diagnostic errors for missing, empty, or corrupt datasets."""

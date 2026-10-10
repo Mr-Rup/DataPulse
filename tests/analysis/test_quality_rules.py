@@ -1,6 +1,6 @@
-# =============================================================================
+# =========================================================================
 # Unit & Scenario Tests: Data Quality Rules
-# =============================================================================
+# =========================================================================
 
 from datetime import datetime
 
@@ -18,10 +18,9 @@ from datapulse.analysis.quality_rules import (
 )
 from datapulse.models.report import ColumnProfile, DuplicateSummary
 
-# =============================================================================
-# 1. STRUCTURAL & COMPLETENESS RULES
-# =============================================================================
-
+# =========================================================================
+# STRUCTURAL & COMPLETENESS RULES
+# =========================================================================
 
 class TestCompletenessAndStructuralRules:
     """Validate missingness, duplicate rows, constant columns, and cardinality."""
@@ -96,10 +95,9 @@ class TestCompletenessAndStructuralRules:
         assert findings[0].affected_columns == ["messy_category"]
 
 
-# =============================================================================
-# 2. NUMERIC DOMAIN & DISTRIBUTION RULES
-# =============================================================================
-
+# =========================================================================
+# NUMERIC DOMAIN & DISTRIBUTION RULES
+# =========================================================================
 
 class TestNumericDomainAndDistributionRules:
     """Validate negative value detection, configuration overrides, and Tukey outliers."""
@@ -153,10 +151,9 @@ class TestNumericDomainAndDistributionRules:
         assert findings[0].severity == "info"
 
 
-# =============================================================================
-# 3. TEMPORAL CHRONOLOGY & END-TO-END PIPELINE
-# =============================================================================
-
+# =========================================================================
+# TEMPORAL CHRONOLOGY & END-TO-END PIPELINE
+# =========================================================================
 
 class TestTemporalChronologyAndPipeline:
     """Validate temporal inversion detection across naming patterns and end-to-end evaluation."""

@@ -1,6 +1,6 @@
-# =============================================================================
+# =========================================================================
 # Unit & Scenario Tests: Dataset Profiler Core Engine
-# =============================================================================
+# =========================================================================
 
 from datetime import date
 from pathlib import Path
@@ -10,10 +10,9 @@ import pytest
 
 from datapulse.profiling.profiler import DatasetProfiler
 
-# =============================================================================
-# 1. CORE DATASET & DIMENSION PROFILING
-# =============================================================================
-
+# =========================================================================
+# CORE DATASET & DIMENSION PROFILING
+# =========================================================================
 
 class TestDatasetProfilerEngine:
     """Validate dataset overview, missing value calculation, duplicates, and quality."""
@@ -54,10 +53,9 @@ class TestDatasetProfilerEngine:
         assert summary["duplicate_percentage"] == 4.0
 
 
-# =============================================================================
-# 2. ROLE-SPECIFIC STATISTICAL AGGREGATIONS
-# =============================================================================
-
+# =========================================================================
+# ROLE-SPECIFIC STATISTICAL AGGREGATIONS
+# =========================================================================
 
 class TestProfilerAggregations:
     """Validate numeric, categorical, and temporal summary aggregations."""
@@ -97,10 +95,9 @@ class TestProfilerAggregations:
         assert stats["unique_count"][0] == 2
 
 
-# =============================================================================
-# 3. PROFILER INPUT VALIDATION
-# =============================================================================
-
+# =========================================================================
+# PROFILER INPUT VALIDATION
+# =========================================================================
 
 class TestProfilerValidation:
     """Validate exception handling for nonexistent or unsupported files."""

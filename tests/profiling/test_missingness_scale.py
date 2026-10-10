@@ -1,6 +1,6 @@
-# =============================================================================
+# =========================================================================
 # Unit & Scenario Tests: Missingness Semantics & Pydantic Config Validation
-# =============================================================================
+# =========================================================================
 
 from pathlib import Path
 
@@ -12,10 +12,9 @@ from datapulse import AnalysisConfig, analyze
 from datapulse.profiling.numeric import profile_numeric
 from datapulse.profiling.profiler import DatasetProfiler
 
-# =============================================================================
-# 1. UNIFIED MISSINGNESS ENGINE
-# =============================================================================
-
+# =========================================================================
+# UNIFIED MISSINGNESS ENGINE
+# =========================================================================
 
 class TestUnifiedMissingnessEngine:
     """Validate detection of nulls, NaNs, infinities, empty strings, and sentinels."""
@@ -96,10 +95,9 @@ class TestUnifiedMissingnessEngine:
         assert round(mean_val, 3) == 4.833
 
 
-# =============================================================================
-# 2. PYDANTIC CONFIG VALIDATION
-# =============================================================================
-
+# =========================================================================
+# PYDANTIC CONFIG VALIDATION
+# =========================================================================
 
 class TestPydanticConfigValidation:
     """Validate AnalysisConfig type checking, bounds, and typo rejection."""
@@ -123,10 +121,9 @@ class TestPydanticConfigValidation:
             AnalysisConfig.model_validate({"min_correlaton": 0.7})
 
 
-# =============================================================================
-# 3. PERFORMANCE & SCALE BENCHMARK
-# =============================================================================
-
+# =========================================================================
+# PERFORMANCE & SCALE BENCHMARK
+# =========================================================================
 
 class TestPerformanceAndScale:
     """Validate full dataset execution speed on synthetic 10k rows."""

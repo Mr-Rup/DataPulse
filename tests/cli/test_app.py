@@ -1,6 +1,6 @@
-# =============================================================================
+# =========================================================================
 # Unit & Scenario Tests: CLI Application & Configuration Loader
-# =============================================================================
+# =========================================================================
 
 import json
 from pathlib import Path
@@ -15,11 +15,9 @@ from datapulse.config import AnalysisConfig, load_config
 
 runner = CliRunner()
 
-
-# =============================================================================
-# 1. COMMAND-LINE INTERFACE COMMANDS & FORMATS
-# =============================================================================
-
+# =========================================================================
+# COMMAND-LINE INTERFACE COMMANDS & FORMATS
+# =========================================================================
 
 class TestCommandLineInterface:
     """Validate Typer CLI commands, format flags, and stdout/file outputs."""
@@ -101,10 +99,9 @@ class TestCommandLineInterface:
         assert res_inv.exit_code != 0
 
 
-# =============================================================================
-# 2. CONFIGURATION LOADING & VALIDATION
-# =============================================================================
-
+# =========================================================================
+# CONFIGURATION LOADING & VALIDATION
+# =========================================================================
 
 class TestConfigurationLoading:
     """Validate TOML/JSON configuration loading and typo rejection."""
