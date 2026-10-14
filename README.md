@@ -313,14 +313,20 @@ DataPulse/
 │   └── DECISIONS.md            # Architecture Decision Records (ADR log)
 │
 ├── src/datapulse/              # Core library source code
-│   ├── analysis/               # Role classification, correlations, quality rules
+│   ├── analysis/               # Semantic role classification & quality rules
+│   │   ├── column_classifier/  # Heuristics (numeric, strings, hints, engine)
+│   │   ├── quality_rules/      # Modular audit rules (completeness, domain, temporal)
+│   │   └── relationships.py    # Pairwise correlations & key candidates
 │   ├── cli/                    # Typer command-line application & commands
 │   │   ├── commands/           # Modular subcommands (analyze, show, column, query, info)
 │   │   └── app.py              # Application setup & default routing
 │   ├── ingestion/              # Delimiter sniffing & zero-copy readers
 │   ├── models/                 # Report schemas & metadata dataclasses
 │   ├── profiling/              # Parallel single-pass statistical profilers
-│   ├── reporting/              # Terminal (Rich), HTML, and JSON exporters
+│   ├── reporting/              # Multi-format report delivery engines
+│   │   ├── html/               # Interactive HTML dashboard generator & templates
+│   │   ├── terminal/           # Rich tables, section dispatchers & query views
+│   │   └── json_exporter.py    # Structured JSON pipeline exporter
 │   ├── api.py                  # High-level analyze() orchestrator
 │   └── config.py               # Pydantic v2 configuration models
 │

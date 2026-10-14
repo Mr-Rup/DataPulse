@@ -63,7 +63,7 @@ All four components are audited and reported with precision down to individual s
 
 ---
 
-## 3. Semantic Role Classification (`analysis/column_classifier.py`)
+## 3. Semantic Role Classification (`analysis/column_classifier/`)
 
 Physical data types (`i64`, `f64`, `str`) do not correspond 1-to-1 with analytical semantics. DataPulse classifies each column into one of 8 semantic roles:
 
@@ -91,7 +91,7 @@ Each role receives specialized profiling routines executed in parallel:
 
 ---
 
-## 5. Automated Quality Rules & Anomaly Engine (`analysis/quality_rules.py`)
+## 5. Automated Quality Rules & Anomaly Engine (`analysis/quality_rules/`)
 
 DataPulse runs automated audit rules on every dataset:
 
@@ -107,8 +107,8 @@ DataPulse runs automated audit rules on every dataset:
 
 ## 6. Multi-Format Exporters (`reporting/`)
 
-- **Terminal (`reporting/terminal.py`):** Uses Rich tables, severity panels, and formatted metric grids for CLI users. Default output provides 5–6 essential features for clean terminal consumption; full reports are available via `--all` or targeted section views via `datapulse show`.
-- **HTML (`reporting/html.py`):** Generates self-contained, single-file HTML dashboards with inline modern dark-mode CSS, client-side real-time column search filtering, and zero external network/CDN dependencies.
+- **Terminal (`reporting/terminal/`):** Decomposed into modular components (`formatter.py`, `roles.py`, `sections.py`, `column_view.py`, `query_view.py`). Uses Rich tables, severity panels, and formatted metric grids for CLI users. Default output provides 5–6 essential features for clean terminal consumption; full reports are available via `--all` or targeted section views via `datapulse show`.
+- **HTML (`reporting/html/`):** Decomposed into modular generators and templates (`generator.py`, `components.py`, `styles.py`, `scripts.py`). Generates self-contained, single-file HTML dashboards with inline modern dark-mode CSS, client-side real-time column search filtering, and zero external network/CDN dependencies.
 - **JSON (`reporting/json_exporter.py`):** Serializes clean, schema-versioned JSON structures suitable for data pipeline logging and CI/CD validation.
 
 ---

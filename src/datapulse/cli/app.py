@@ -71,7 +71,7 @@ def main(
 # =========================================================================
 
 app.command(name="analyze")(run_analyze)
-app.command(name="profile")(run_profile)
+app.command(name="profile", help="Alias for analyze command.")(run_profile)
 app.command(name="show")(run_show)
 app.command(name="column")(run_column)
 app.command(name="query")(run_query)
