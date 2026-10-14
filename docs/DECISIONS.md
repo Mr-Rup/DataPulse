@@ -43,3 +43,17 @@ A record of key architectural choices and design rationales made during the deve
 - **Context:** HTML audit reports are often viewed offline, behind enterprise firewalls, or in isolated air-gapped environments.
 - **Decision:** Bundle the entire HTML dashboard with embedded Vanilla CSS and lightweight inline JavaScript. Zero external CDN dependencies (e.g., no external fonts or remote JavaScript bundles).
 - **Consequences:** HTML reports open instantly anywhere, never break due to CDN outages, and respect strict enterprise security policies.
+---
+
+## ADR-007: Pure Polars Architecture (0% Pandas Overhead)
+- **Context:** Legacy EDA libraries often retain hidden Pandas conversions, causing silent memory bloat and single-threaded CPU contention.
+- **Decision:** Mandate a 100% pure Polars architecture across all components (ingestion, missingness, statistical calculations, classifications, and exports). Forbid any Pandas dependency or runtime conversion.
+- **Consequences:** Predictable sub-second execution, native Rust multi-threading, low memory footprint, and full compatibility with in-memory Polars DataFrames and LazyFrames.
+
+---
+
+## ADR-008: Modular CLI Command Architecture & Polars SQL Querying
+- **Context:** As command capabilities grew (section views, column profiles, SQL querying, metadata inspection), maintaining a monolithic `app.py` created unnecessary complexity. Users also needed the ability to query tabular data directly from the terminal without launching separate SQL clients.
+- **Decision:** Decompose CLI commands into modular handlers under `datapulse.cli.commands` (`analyze`, `show`, `column`, `query`, `info`). Integrate Polars' native `SQLContext` in `datapulse query` to allow direct SQL and expression execution against any supported tabular file.
+- **Consequences:** Clean separation of concerns, high maintainability, and direct SQL querying capability with zero database overhead.
+

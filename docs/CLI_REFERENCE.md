@@ -1,45 +1,55 @@
 # DataPulse CLI Reference Manual
 
-Comprehensive reference for the `datapulse` command-line interface.
+Comprehensive technical manual for the `datapulse` command-line interface.
 
 ---
 
-## Command Overview
+## 📐 General Command Pattern
 
-DataPulse provides a dual-invocation CLI:
-1. **Direct root execution:** `datapulse <file_path> [options]`
-2. **Explicit subcommand:** `datapulse analyze <file_path> [options]`
-3. **Alias subcommand:** `datapulse profile <file_path> [options]`
-4. **Version utility:** `datapulse version` or `datapulse -v / --version`
-
----
-
-## Global Invocations & Flags
+DataPulse follows a clean, predictable command syntax across all environments (PowerShell, CMD, Bash, Zsh):
 
 ```bash
-# Check version
-datapulse --version
-datapulse -v
-datapulse version
+datapulse <command> <file> [sub-target/column/section] [options]
+```
 
-# Display CLI help manual
+### Command Dispatch & Default Execution
+- **Direct file execution:** Running `datapulse <file>` automatically resolves to `datapulse analyze <file>`.
+- **Command list:** `analyze`, `profile` (alias), `show`, `column`, `query`, `info`, `version`.
+- **Global flags:** `--version` (`-v`), `--help`.
+
+```bash
+# Direct execution (defaults to analyze)
+datapulse data/sales.csv
+
+# Explicit analyze verb
+datapulse analyze data/sales.csv
+
+# View general help or command-specific options
 datapulse --help
-datapulse analyze --help
+datapulse show --help
 ```
 
 ---
 
-## Command Syntax & Options
+## 🛠️ Commands Reference
 
-### `datapulse [analyze] <file_path> [OPTIONS]`
+### 1. `datapulse [analyze] <file_path> [OPTIONS]`
 
-Profiles a tabular dataset from disk, executes quality rules, and renders or saves a report.
+Analyzes and profiles a dataset from disk, executes automated data quality audits, and renders terminal tables or saves reports.
 
 #### Positional Arguments
 
 | Argument | Type | Description |
 | :--- | :--- | :--- |
 | `file_path` | `Path` (Required) | Path to dataset (`.parquet`, `.csv`, `.tsv`, `.json`, `.ndjson`, `.xlsx`, `.xls`). |
+
+#### Display & Filtering Options
+
+| Option | Short | Type | Default | Description |
+| :--- | :--- | :--- | :--- | :--- |
+| `--all` | `-a` | `flag` | `False` | Display full comprehensive report across all sections (bypassing the default 5–6 core summary view). |
+| `--section` | `-s` | `str` | `None` | Display only a specific analytical section (e.g. `quality`, `numeric`, `missing`). |
+| `--columns` | | `str` | `None` | Comma-separated column names to filter table output (e.g. `--columns age,salary`). |
 
 #### Output Format & Destination Options
 
@@ -55,13 +65,11 @@ Profiles a tabular dataset from disk, executes quality rules, and renders or sav
 > Specifying `-o report.html` automatically switches the format to `html`.  
 > Specifying `-o data.json` automatically switches the format to `json`.
 
----
-
-#### Configuration & Profiling Controls
+#### Profiling & Ingestion Controls
 
 | Option | Short | Type | Default | Description |
 | :--- | :--- | :--- | :--- | :--- |
-| `--config` | `-c` | `Path` | `None` | Path to a custom TOML or JSON configuration file. |
+| `--config` | `-c` | `Path` | `None` | Path to custom TOML or JSON configuration file. |
 | `--max-categories` | | `int` | `20` | Maximum top category frequencies to track per column. |
 | `--correlations` / `--no-correlations` | | `bool` | `True` | Enable or disable pairwise Pearson/Spearman correlation computations. |
 | `--sheet-name` | | `str` | `None` | Sheet name to read when profiling Excel workbooks (`.xlsx`, `.xls`). |
@@ -69,56 +77,196 @@ Profiles a tabular dataset from disk, executes quality rules, and renders or sav
 
 ---
 
-## Practical Examples by Scenario
+### 2. `datapulse show <file_path> [SECTION] [OPTIONS]`
 
-### 1. Terminal Inspection
+Target an analytical section or filtered column view without displaying unneeded sections.
+
+#### Positional Arguments
+
+| Argument | Type | Default | Description |
+| :--- | :--- | :--- | :--- |
+| `file_path` | `Path` (Required) | | Path to dataset file. |
+| `section` | `str` (Optional) | `overview` | Analytical section to render (see table below). |
+
+#### Available Sections
+
+| Section Key | Aliases | Description |
+| :--- | :--- | :--- |
+| `overview` | | High-level dataset metrics (rows, columns, format, size, elapsed time). |
+| `schema` | | Physical column types and Polars schema. |
+| `missing` | | Detailed accounting of nulls, float NaNs, empty strings, and sentinels. |
+| `duplicates` | `duplicate` | Full-row duplicate count and duplicate percentage. |
+| `quality` | | Column quality score table with inferred analytical roles. |
+| `numeric` | | Quantiles, mean, std dev, IQR, zero counts, and negative counts. |
+| `categorical` | | Distinct counts, cardinality ratios, mode, and top categories. |
+| `temporal` | `datetime`, `date` | Timestamp ranges, span duration, and unique counts. |
+| `boolean` | `bool` | True/False distribution and percentage breakdown. |
+| `text` | | Freeform text character length metrics (min, max, mean, median). |
+| `identifiers` | `identifier`, `id` | Identifier uniqueness ratios and duplicate key counts. |
+| `findings` | `anomalies` | Automated data quality alerts and anomaly explanations. |
+| `correlations` | `corr` | Pairwise Pearson/Spearman correlations ($|r| \ge 0.50$). |
+| `keys` | `key` | Primary key candidate evaluation (100% uniqueness, 0 nulls). |
+
+#### Options
+
+| Option | Short | Type | Default | Description |
+| :--- | :--- | :--- | :--- | :--- |
+| `--columns` | | `str` | `None` | Comma-separated column names to filter section output. |
+| `--config` | `-c` | `Path` | `None` | Path to configuration file. |
+| `--sheet-name` | | `str` | `None` | Excel sheet name. |
+| `--separator` | | `str` | `None` | Delimiter character override. |
+
+#### Examples
 ```bash
-# Quickest terminal summary (no subcommand needed)
-datapulse data/customers.csv
+# View missingness across all columns
+datapulse show data.csv missing
 
-# Explicit analyze verb
-datapulse analyze data/customers.parquet
-```
+# View numeric stats for selected columns
+datapulse show data.parquet numeric --columns fare_amount,trip_distance
 
-### 2. Interactive HTML Dashboard
-```bash
-# Quick export to 'customers_report.html'
-datapulse data/customers.csv --html
-
-# Custom output destination
-datapulse data/customers.csv -o reports/audit_2026.html
-```
-
-### 3. Pipeline JSON Streaming & Export
-```bash
-# Stream JSON directly to terminal or pipe to jq
-datapulse data/customers.csv --json | jq .summary
-
-# Save JSON directly to disk
-datapulse data/customers.csv -o data/metrics.json
-```
-
-### 4. Excel Workbooks & Custom Delimiters
-```bash
-# Read specific Excel sheet
-datapulse financial_model.xlsx --sheet-name "Revenue_Q3" --html
-
-# Tab-separated file with custom categories
-datapulse access_logs.tsv --separator "\t" --max-categories 50
-```
-
-### 5. Custom Configuration File
-```bash
-# Load validation thresholds and sentinels from TOML
-datapulse transactions.parquet -c config/prod_audit.toml -o audit.html
+# View automated quality alerts only
+datapulse show data.csv findings
 ```
 
 ---
 
-## Zero-Installation Execution (`uvx`)
+### 3. `datapulse column <file_path> <column_name> [OPTIONS]`
 
-You can run DataPulse directly from the command line without installing it into an environment:
+Provides an exhaustive, single-column statistical deep dive.
+
+#### Positional Arguments
+
+| Argument | Type | Description |
+| :--- | :--- | :--- |
+| `file_path` | `Path` (Required) | Path to dataset file. |
+| `column_name` | `str` (Required) | Exact column name to profile. |
+
+#### Output Details
+- **Header Panel:** Physical Polars type, inferred semantic role, confidence %, classification rationale, and distinct count.
+- **Missingness Breakdown:** Nulls, NaNs, empty strings, sentinels, and total missing %.
+- **Distribution & Statistics:** Quantiles, mean, median, IQR, skewness, zeros, or category frequencies.
+- **Data Quality Alerts:** Any critical, warning, or informational alerts impacting this column.
+
+#### Options
+
+| Option | Short | Type | Default | Description |
+| :--- | :--- | :--- | :--- | :--- |
+| `--config` | `-c` | `Path` | `None` | Path to configuration file. |
+| `--sheet-name` | | `str` | `None` | Excel sheet name. |
+| `--separator` | | `str` | `None` | Delimiter character override. |
+
+#### Example
+```bash
+datapulse column transactions.parquet fare_amount
+```
+
+---
+
+### 4. `datapulse query <file_path> [TARGET_OR_SQL] [OPTIONS]`
+
+Executes direct SQL queries or column filters against any tabular dataset using native Polars `SQLContext`.
+
+#### Positional Arguments
+
+| Argument | Type | Default | Description |
+| :--- | :--- | :--- | :--- |
+| `file_path` | `Path` (Required) | | Path to dataset file. |
+| `target_or_sql` | `str` (Optional) | `None` | Full SQL statement, column name, or filter expression. |
+
+#### Querying Modes
+
+1. **Direct SQL:**
+   DataPulse registers the dataset in `pl.SQLContext` under table names: `self`, `df`, `table`, and the file's clean stem name:
+   ```bash
+   datapulse query data.csv "SELECT * FROM self WHERE fare_amount < 0"
+   datapulse query data.parquet "SELECT category, count(*) FROM self GROUP BY category"
+   ```
+
+2. **Expression Filter (`--filter`):**
+   ```bash
+   datapulse query data.csv --filter "fare_amount < 0 AND trip_distance > 5"
+   ```
+
+3. **Column Threshold Filtering:**
+   ```bash
+   # Filter by greater-than
+   datapulse query data.csv fare_amount --gt 100
+
+   # Filter by less-than
+   datapulse query data.csv age --lt 18
+
+   # Filter by exact equality
+   datapulse query data.csv payment_type --equals CASH
+   ```
+
+4. **Default Quick Preview:**
+   ```bash
+   datapulse query data.csv --limit 10
+   ```
+
+#### Options
+
+| Option | Short | Type | Default | Description |
+| :--- | :--- | :--- | :--- | :--- |
+| `--filter` | | `str` | `None` | Filter expression string. |
+| `--equals` | | `str` | `None` | Match value for target column. |
+| `--gt` | | `float` | `None` | Greater-than threshold for target column. |
+| `--lt` | | `float` | `None` | Less-than threshold for target column. |
+| `--limit` | `-n` | `int` | `50` | Maximum number of rows to return and display. |
+| `--sheet-name` | | `str` | `None` | Excel sheet name. |
+| `--separator` | | `str` | `None` | Delimiter character override. |
+
+---
+
+### 5. `datapulse info <file_path> [OPTIONS]`
+
+Lightweight metadata and schema inspection without the computational overhead of full dataset profiling.
+
+#### Positional Arguments
+
+| Argument | Type | Description |
+| :--- | :--- | :--- |
+| `file_path` | `Path` (Required) | Path to dataset file. |
+
+#### Output Details
+- Source filename, absolute path, detected format, and file size in MB.
+- Total row count (resolved lazily without eagerly reading entire dataset).
+- Total column count and complete Polars physical schema table.
+
+#### Options
+
+| Option | Type | Default | Description |
+| :--- | :--- | :--- | :--- |
+| `--sheet-name` | `str` | `None` | Excel sheet name. |
+| `--separator` | `str` | `None` | Delimiter character override. |
+
+#### Example
+```bash
+datapulse info large_dataset.parquet
+```
+
+---
+
+### 6. `datapulse version`
+
+Prints the current version of DataPulse and exits.
 
 ```bash
-uvx datapulse data/dataset.csv --html
+datapulse version
+datapulse -v
+datapulse --version
+```
+
+---
+
+## ⚡ Instant Execution with `uvx`
+
+You can run any DataPulse command without pre-installing the package:
+
+```bash
+# Instant profile
+uvx --from git+https://github.com/Mr-Rup/DataPulse.git datapulse data.csv
+
+# Instant SQL query
+uvx --from git+https://github.com/Mr-Rup/DataPulse.git datapulse query data.csv "SELECT * FROM self LIMIT 5"
 ```

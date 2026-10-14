@@ -2,67 +2,63 @@
 
 # ⚡ DataPulse
 
-**Blazing-fast automated exploratory data analysis (EDA) toolkit for tabular datasets, powered by Polars.**
+**Blazing-fast automated exploratory data analysis (EDA) toolkit for tabular datasets, powered solely by Polars.**
 
 [![CI](https://img.shields.io/badge/CI-Passing-success?style=flat&logo=github)](https://github.com/Mr-Rup/DataPulse)
 [![Python](https://img.shields.io/badge/Python-3.11%20%7C%203.12%20%7C%203.13%20%7C%203.14-blue?style=flat&logo=python&logoColor=white)](https://www.python.org/)
-[![Polars](https://img.shields.io/badge/Polars-Fast%20DataFrame-CD792C?style=flat&logo=polars&logoColor=white)](https://pola.rs/)
+[![Polars](https://img.shields.io/badge/Polars-100%25%20Pure%20Engine-CD792C?style=flat&logo=polars&logoColor=white)](https://pola.rs/)
+[![Zero Pandas](https://img.shields.io/badge/Pandas%20Overhead-0%25-green?style=flat)](#pure-polars-architecture)
 [![License](https://img.shields.io/badge/License-MIT-green.svg?style=flat)](#license)
 [![Code Style: Ruff](https://img.shields.io/badge/code%20style-ruff-000000.svg?style=flat)](https://github.com/astral-sh/ruff)
 
 </div>
 
-> Profile millions of tabular rows in milliseconds. Generates role-specific descriptive statistics, automated data quality anomalies, multicollinearity warnings, interactive dark-mode HTML dashboards, and machine-readable JSON pipelines—with zero external CDN dependencies.
+> Profile millions of tabular rows in milliseconds. Generates role-specific descriptive statistics, automated data quality anomalies, multicollinearity warnings, interactive dark-mode HTML dashboards, and machine-readable JSON pipelines—with zero external CDN dependencies and zero Pandas overhead.
 
 ---
 
-## 🏛️ Architecture & Processing Pipeline
+## 🚀 Pure Polars Architecture (0% Pandas Overhead)
+
+DataPulse is built **solely on Polars** and Rust-native multi-threading:
+- **Zero Pandas Dependency:** 100% free of legacy Pandas bottlenecks, eager single-threaded loops, and memory copies.
+- **Zero-Copy Streaming:** Queries, scans, and profiles run directly on Polars `LazyFrame` expression graphs without full memory duplication.
+- **Unified Missingness Audit:** Simultaneously audits nulls, IEEE 754 float `NaN`s, empty strings (`""`), and domain sentinel tokens (`"?"`, `"-999"`, `"N/A"`).
+- **Embedded In-Terminal SQL:** Direct dataset filtering and SQL querying powered by native Polars `SQLContext`.
+
+---
+
+## 🏛️ Pipeline Architecture
 
 ```
-Raw Tabular Dataset (.parquet, .csv, .json, .xlsx, DataFrame)
-                            |
-                            v
+Raw Tabular Dataset (.parquet, .csv, .json, .xlsx, Polars DataFrame)
+                            │
+                            ▼
             Zero-Copy Ingestion & Sniffing
           (Polars Lazy Engine | Delimiter & EOL Sniffer)
-                            |
-                            v
-          Parallel Single-Pass Column Profiler
-     (Nulls | NaNs | Empty Strings | Sentinel Values)
-                            |
-                            v
-         Semantic Role Inference & Classification
- (Numeric | Categorical | Temporal | Text | Boolean | Identifier)
-                            |
-                            v
-       Statistical Quality & Anomaly Engine
- (Tukey IQR Outliers | Inversions | Duplicates | Collinearity)
-                            |
-                            v
-             Unified Multi-Format Delivery
- ┌──────────────────────────┼──────────────────────────┐
- ▼                          ▼                          ▼
-Terminal UI           HTML Dashboard             JSON Stream
+                            │
+                            ▼
+           Parallel Single-Pass Column Profiler
+      (Nulls | NaNs | Empty Strings | Sentinel Values)
+                            │
+                            ▼
+          Semantic Role Inference & Classification
+  (Numeric | Categorical | Temporal | Text | Boolean | Identifier)
+                            │
+                            ▼
+        Statistical Quality & Anomaly Engine
+  (Tukey IQR Outliers | Inversions | Duplicates | Collinearity)
+                            │
+                            ▼
+              Unified Multi-Format Delivery
+  ┌─────────────────────────┼─────────────────────────┐
+  ▼                         ▼                         ▼
+Terminal UI           HTML Dashboard            JSON Stream
 (Rich Tables & Grids)  (Standalone Dark Theme)   (Pydantic / Dict)
 ```
 
 ---
 
-## 📊 Benchmark & Performance Comparison
-
-Engineered from the ground up on Polars and Rust multi-threading to eliminate memory duplication and single-threaded bottlenecks:
-
-| Metric | Traditional Pandas Profilers | DataPulse (Polars Engine) |
-| :--- | :--- | :--- |
-| **Throughput** | ~20,000 – 50,000 rows/sec | **~1,200,000+ rows/sec** |
-| **Execution Model** | Eager full in-memory copy | **Zero-copy lazy frame expressions** |
-| **Missingness Audit** | Nulls only | **Unified: Nulls + NaNs + Empty Strings + Sentinels** |
-| **Correlations** | Single-threaded | **Vectorized multi-threaded (Pearson & Spearman)** |
-| **HTML Report** | Heavy CDN bundles (breaks offline) | **100% self-contained, inline CSS/JS (Air-gapped ready)** |
-| **Multicollinearity** | Manual review required | **Automated high collinearity warnings (|r| >= 0.90)** |
-
----
-
-## 🚀 Key Features
+## ⚡ Key Features
 
 - **Multi-Format Ingestion:** Zero-overhead streaming ingestion for Apache Parquet (`.parquet`), CSV/TSV (`.csv`, `.tsv`), JSON/NDJSON (`.json`, `.ndjson`, `.jsonl`), Excel (`.xlsx`, `.xls`), and in-memory Polars `DataFrame` / `LazyFrame` objects.
 - **Smart Delimiter Sniffing:** Automatically detects field delimiters (`,`, `\t`, `;`, `|`) and line terminators (`\r\n`, `\n`, `\r`) from leading byte samples.
@@ -85,7 +81,7 @@ Engineered from the ground up on Polars and Rust multi-threading to eliminate me
   - Severe collinearity warnings ($|r| \ge 0.90$) to catch data leakage and redundancy.
   - Automated primary key discovery (100% uniqueness, zero missing values).
 - **Multi-Format Output:**
-  - **Terminal:** Interactive Rich tables, severity badges, and metric cards.
+  - **Terminal:** Interactive Rich tables, severity badges, and metric cards. Default view presents 5–6 essential features; full reports accessible via `--all`.
   - **HTML:** Standalone, single-file dashboard with instant client-side column search filter and zero CDN dependencies.
   - **JSON:** Fully structured, validated JSON export for downstream data pipelines and CI/CD gates.
 
@@ -93,33 +89,48 @@ Engineered from the ground up on Polars and Rust multi-threading to eliminate me
 
 ## 📦 Installation & Setup
 
-DataPulse supports both **`uv`** (recommended for blazing speed) and standard **`pip`**:
+DataPulse is optimized for [**`uv`**](https://github.com/astral-sh/uv)—the ultra-fast Python package installer and resolver.
 
-### Standalone Global CLI
+### 1. Install `uv` (Recommended)
+If you do not have `uv` installed, get it in seconds:
+
+- **Windows (PowerShell):**
+  ```powershell
+  powershell -ExecutionPolicy ByPass -c "irm https://astral.sh/uv/install.ps1 | iex"
+  ```
+- **macOS / Linux:**
+  ```bash
+  curl -LsSf https://astral.sh/uv/install.sh | sh
+  ```
+> For additional installation options, visit the [official uv GitHub repository](https://github.com/astral-sh/uv).
+
+### 2. Install DataPulse
+
+#### Add to an Existing Project
 ```bash
-# Using uv (Isolated global CLI)
-uv tool install datapulse
+# Using uv (Recommended)
+uv add git+https://github.com/Mr-Rup/DataPulse.git
+
+# Using standard pip
+pip install git+https://github.com/Mr-Rup/DataPulse.git
+```
+
+#### Install as a Standalone Global CLI
+```bash
+# Using uv tool
+uv tool install git+https://github.com/Mr-Rup/DataPulse.git
 
 # Using pip
-pip install datapulse
+pip install git+https://github.com/Mr-Rup/DataPulse.git
 ```
 
-### Add to an Existing Project
+#### Zero-Installation Instant Run (`uvx`)
+Profile any dataset directly without installing anything into your global or local environment:
 ```bash
-# Using uv
-uv add datapulse
-
-# Using pip
-pip install datapulse
+uvx --from git+https://github.com/Mr-Rup/DataPulse.git datapulse data/dataset.csv --html
 ```
 
-### Zero-Installation Superpower (`uvx`)
-Profile any dataset instantly without installing anything into your environment:
-```bash
-uvx datapulse data/dataset.csv --html
-```
-
-### Local Development Setup
+#### Local Development Setup
 ```bash
 git clone https://github.com/Mr-Rup/DataPulse.git
 cd DataPulse
@@ -133,57 +144,65 @@ uv run pytest
 
 ---
 
-## 💻 Command-Line Interface (CLI)
+## 💻 Core CLI Commands
 
-DataPulse is built with ergonomics in mind: commands are short, intuitive, and easy to remember across CMD, PowerShell, and Bash.
-
-### 1. Quick Terminal Inspection
+DataPulse adheres to a uniform command syntax:
 ```bash
-# Ultra-short root command (no verb needed)
+datapulse <command> <file> [target/column/section] [options]
+```
+
+Here are the 5 core commands for day-to-day data engineering and analysis:
+
+### 1. Automated Profile & Analysis (`analyze`)
+```bash
+# Clean default terminal overview (5-6 core features)
 datapulse data.csv
 
-# Explicit subcommand
-datapulse analyze data.parquet
+# Comprehensive full report across all sections
+datapulse data.csv --all
+
+# Export interactive HTML dashboard
+datapulse data.csv --html -o reports/audit.html
 ```
 
-### 2. Generate Interactive HTML Dashboard
+### 2. Section Deep-Dive (`show`)
 ```bash
-# Instant HTML export (auto-creates data_report.html)
-datapulse data.csv --html
+# Inspect specific analytical section (quality, numeric, missing, schema, etc.)
+datapulse show data.csv quality
 
-# Custom destination (auto-detects HTML format from file extension!)
-datapulse data.csv -o reports/audit_dashboard.html
+# Filter section display to specific columns
+datapulse show data.csv numeric --columns amount,tax,total
 ```
 
-### 3. Machine-Readable JSON Export
+### 3. Single Column Profile (`column`)
 ```bash
-# Stream JSON directly to terminal or pipe to jq
-datapulse data.csv --json | jq .summary
-
-# Save JSON directly to file (auto-detects JSON from file extension!)
-datapulse data.csv -o reports/metrics.json
+# Exhaustive statistical breakdown for an individual column
+datapulse column data.csv fare_amount
 ```
 
-### 4. Custom Configuration & Advanced Controls
+### 4. Interactive SQL & In-Terminal Querying (`query`)
 ```bash
-# Load validation rules and sentinels from a TOML config file
-datapulse data.parquet -c audit_config.toml
+# Execute direct SQL via Polars SQLContext
+datapulse query data.csv "SELECT * FROM self WHERE fare_amount < 0"
 
-# Disable heavy correlations on wide datasets
-datapulse data.csv --no-correlations
-
-# Excel workbook with specific sheet
-datapulse workbook.xlsx --sheet-name "Financials" --html
-
-# Delimited file with custom separator
-datapulse server_logs.tsv --separator "\t"
+# Filter by column threshold
+datapulse query data.csv age --gt 30 --limit 20
 ```
+
+### 5. Instant File Metadata & Schema (`info`)
+```bash
+# Lightweight inspection of row count, size, and Polars types without full profiling
+datapulse info data.parquet
+```
+
+> 📖 **Full Command Reference:**  
+> For complete syntax, all available options, filtering parameters, and examples, see the [CLI Reference Manual (docs/CLI_REFERENCE.md)](docs/CLI_REFERENCE.md).
 
 ---
 
 ## 🐍 In-Code Python SDK (`import datapulse as dp`)
 
-Integrate DataPulse seamlessly into Python scripts, analytics workflows, or Jupyter notebooks:
+Integrate DataPulse directly into your Python pipelines and Jupyter notebooks:
 
 ### The One-Liner
 ```python
@@ -206,15 +225,7 @@ print(f"Total Rows: {report.summary.row_count}")
 print(f"Columns: {report.summary.column_count}")
 ```
 
-### Pass Config File Path Directly
-```python
-import datapulse as dp
-
-# Pass path to TOML or JSON config file directly
-report = dp.analyze("data.csv", config="config.toml")
-```
-
-### Strongly-Typed Custom Configuration
+### Strongly-Typed Configuration
 ```python
 import datapulse as dp
 
@@ -293,41 +304,40 @@ include_full_path = false
 
 ```
 DataPulse/
-|
-+-- docs/                       # Comprehensive documentation
-|   +-- ARCHITECTURE.md         # Pipeline design & Polars engine details
-|   +-- CLI_REFERENCE.md        # Complete CLI manual & flag options
-|   +-- PYTHON_API.md           # Python SDK usage & report models
-|   +-- CONFIGURATION.md        # Configuration schema & sample files
-|   +-- DECISIONS.md            # Architecture Decision Records (ADR log)
-|
-+-- src/datapulse/              # Core library source code
-|   +-- analysis/               # Role classification, correlations, quality rules
-|   +-- cli/                    # Typer command-line application
-|   +-- ingestion/              # Delimiter sniffing & zero-copy readers
-|   +-- models/                 # Report schemas & metadata dataclasses
-|   +-- profiling/              # Parallel single-pass statistical profilers
-|   +-- reporting/              # Terminal (Rich), HTML, and JSON exporters
-|   +-- api.py                  # High-level analyze() orchestrator
-|   +-- config.py               # Pydantic v2 configuration models
-|
-+-- tests/                      # Consolidated scenario test suite
-|   +-- analysis/               # Classifier, correlation, and quality rules tests
-|   +-- cli/                    # Typer CLI commands, auto-detection, and flags
-|   +-- ingestion/              # Readers, format sniffing, and lazy loaders
-|   +-- models/                 # Report models and serialization tests
-|   +-- profiling/              # Profilers, scale, and sentinel tests
-|   +-- reporting/              # HTML template and JSON export tests
-|   +-- test_api.py             # Public API end-to-end integration tests
-|   +-- test_edge_cases.py      # Malformed inputs, empty frames, and type errors
-|   +-- test_invariants.py      # Mathematical consistency & schema invariants
-|
-+-- scripts/                    # Utilities and performance benchmarks
-|   +-- benchmark_datapulse.py  # Throughput & scale benchmark runner
-|
-+-- pyproject.toml              # Build system, dependencies, and tooling configs
-+-- README.md                   # Project documentation & quick start
-+-- LICENSE                     # MIT License
+│
+├── docs/                       # Comprehensive documentation
+│   ├── ARCHITECTURE.md         # Polars engine design & pipeline internals
+│   ├── CLI_REFERENCE.md        # Complete CLI manual & flag options
+│   ├── PYTHON_API.md           # Python SDK usage & report models
+│   ├── CONFIGURATION.md        # Configuration schema & sample files
+│   └── DECISIONS.md            # Architecture Decision Records (ADR log)
+│
+├── src/datapulse/              # Core library source code
+│   ├── analysis/               # Role classification, correlations, quality rules
+│   ├── cli/                    # Typer command-line application & commands
+│   │   ├── commands/           # Modular subcommands (analyze, show, column, query, info)
+│   │   └── app.py              # Application setup & default routing
+│   ├── ingestion/              # Delimiter sniffing & zero-copy readers
+│   ├── models/                 # Report schemas & metadata dataclasses
+│   ├── profiling/              # Parallel single-pass statistical profilers
+│   ├── reporting/              # Terminal (Rich), HTML, and JSON exporters
+│   ├── api.py                  # High-level analyze() orchestrator
+│   └── config.py               # Pydantic v2 configuration models
+│
+├── tests/                      # Consolidated scenario test suite
+│   ├── analysis/               # Classifier, correlation, and quality rules tests
+│   ├── cli/                    # Typer CLI commands, subcommands, and flags
+│   ├── ingestion/              # Readers, format sniffing, and lazy loaders
+│   ├── models/                 # Report models and serialization tests
+│   ├── profiling/              # Profilers, scale, and sentinel tests
+│   ├── reporting/              # HTML template and JSON export tests
+│   ├── test_api.py             # Public API end-to-end integration tests
+│   ├── test_edge_cases.py      # Malformed inputs, empty frames, and type errors
+│   └── test_invariants.py      # Mathematical consistency & schema invariants
+│
+├── pyproject.toml              # Build system, dependencies, and tooling configs
+├── README.md                   # Project documentation & quick start
+└── LICENSE                     # MIT License
 ```
 
 ---

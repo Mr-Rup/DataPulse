@@ -136,6 +136,150 @@ class TestCommandLineInterface:
         parsed = json.loads(res_json.stdout)
         assert parsed["schema_version"] == "1.0.0"
 
+    def test_cli_analyze_all_and_section(self, realistic_csv_path: Path):
+        # Comprehensive full report (--all)
+        res_all = runner.invoke(app, [str(realistic_csv_path), "--all"])
+        assert res_all.exit_code == 0
+        assert "Dataset Overview" in res_all.stdout
+        assert "Dataset Schema" in res_all.stdout
+
+        # Single section via flag (--section quality)
+        res_sec = runner.invoke(
+            app, [str(realistic_csv_path), "--section", "quality"]
+        )
+        assert res_sec.exit_code == 0
+        assert "Column Quality Summary" in res_sec.stdout
+
+        # Invalid section name rejection
+        res_inv = runner.invoke(
+            app, [str(realistic_csv_path), "--section", "non_existent"]
+        )
+        assert res_inv.exit_code != 0
+
+    def test_cli_show_command(self, realistic_csv_path: Path):
+        # Default show (overview)
+        res_show = runner.invoke(app, ["show", str(realistic_csv_path)])
+        assert res_show.exit_code == 0
+        assert "Dataset Overview" in res_show.stdout
+
+        # Explicit section (numeric)
+        res_num = runner.invoke(app, ["show", str(realistic_csv_path), "numeric"])
+        assert res_num.exit_code == 0
+        assert "Numeric Statistics" in res_num.stdout
+
+        # Section with column filter
+        res_filt = runner.invoke(
+            app,
+            [
+                "show",
+                str(realistic_csv_path),
+                "missing",
+                "--columns",
+                "amount,mixed_missing",
+            ],
+        )
+        assert res_filt.exit_code == 0
+        assert "Missing Values & Data Gaps" in res_filt.stdout
+
+        # Invalid section rejection
+        res_bad = runner.invoke(app, ["show", str(realistic_csv_path), "bogus"])
+        assert res_bad.exit_code != 0
+
+    def test_cli_column_command(self, realistic_csv_path: Path):
+        # Valid column deep-dive
+        res_col = runner.invoke(
+            app, ["column", str(realistic_csv_path), "amount"]
+        )
+        assert res_col.exit_code == 0
+        assert "DataPulse | Column: amount" in res_col.stdout
+        assert "Missingness Breakdown: amount" in res_col.stdout
+
+        # Non-existent column error handling
+        res_err = runner.invoke(
+            app, ["column", str(realistic_csv_path), "missing_col"]
+        )
+        assert res_err.exit_code != 0
+
+    def test_cli_query_command(self, realistic_csv_path: Path):
+        # Direct SQL query
+        res_sql = runner.invoke(
+            app,
+            [
+                "query",
+                str(realistic_csv_path),
+                "SELECT * FROM self WHERE amount > 30",
+            ],
+        )
+        assert res_sql.exit_code == 0
+        assert "SQL Execution" in res_sql.stdout
+
+        # Filter option query
+        res_filt = runner.invoke(
+            app,
+            [
+                "query",
+                str(realistic_csv_path),
+                "--filter",
+                "amount > 30",
+            ],
+        )
+        assert res_filt.exit_code == 0
+        assert "Filter:" in res_filt.stdout
+
+        # Column target with --gt filter
+        res_gt = runner.invoke(
+            app,
+            [
+                "query",
+                str(realistic_csv_path),
+                "amount",
+                "--gt",
+                "30",
+            ],
+        )
+        assert res_gt.exit_code == 0
+        assert "Filter:" in res_gt.stdout
+
+        # Column target with --lt filter
+        res_lt = runner.invoke(
+            app,
+            [
+                "query",
+                str(realistic_csv_path),
+                "amount",
+                "--lt",
+                "30",
+            ],
+        )
+        assert res_lt.exit_code == 0
+        assert "Filter:" in res_lt.stdout
+
+        # Column target with --equals filter
+        res_eq = runner.invoke(
+            app,
+            [
+                "query",
+                str(realistic_csv_path),
+                "is_active",
+                "--equals",
+                "true",
+            ],
+        )
+        assert res_eq.exit_code == 0
+        assert "Filter:" in res_eq.stdout
+
+        # Preview default
+        res_prev = runner.invoke(app, ["query", str(realistic_csv_path)])
+        assert res_prev.exit_code == 0
+        assert "Preview:" in res_prev.stdout
+
+    def test_cli_info_command(self, realistic_csv_path: Path):
+        # Fast metadata and schema inspection
+        res_info = runner.invoke(app, ["info", str(realistic_csv_path)])
+        assert res_info.exit_code == 0
+        assert "DataPulse | File Information" in res_info.stdout
+        assert "Schema Definition" in res_info.stdout
+
 
 # =========================================================================
 # CONFIGURATION LOADING & VALIDATION

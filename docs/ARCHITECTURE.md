@@ -107,6 +107,42 @@ DataPulse runs automated audit rules on every dataset:
 
 ## 6. Multi-Format Exporters (`reporting/`)
 
-- **Terminal (`reporting/terminal.py`):** Uses Rich tables, severity panels, and formatted metric grids for CLI users.
+- **Terminal (`reporting/terminal.py`):** Uses Rich tables, severity panels, and formatted metric grids for CLI users. Default output provides 5–6 essential features for clean terminal consumption; full reports are available via `--all` or targeted section views via `datapulse show`.
 - **HTML (`reporting/html.py`):** Generates self-contained, single-file HTML dashboards with inline modern dark-mode CSS, client-side real-time column search filtering, and zero external network/CDN dependencies.
 - **JSON (`reporting/json_exporter.py`):** Serializes clean, schema-versioned JSON structures suitable for data pipeline logging and CI/CD validation.
+
+---
+
+## 7. Modular CLI Command Architecture (`cli/commands/`)
+
+To keep execution clean, maintainable, and extensible, DataPulse decomposes its CLI into dedicated subcommand handlers:
+
+- **`cli/commands/analyze.py`:** Core profiling handler supporting full terminal reports, quick format switches (`--html`, `--json`), and section filtering (`--all`, `--section`, `--columns`).
+- **`cli/commands/show.py`:** Targeted section renderer with granular column filtering.
+- **`cli/commands/column.py`:** Dedicated single-column statistical profiler.
+- **`cli/commands/query.py`:** Interactive tabular querying and SQL execution engine.
+- **`cli/commands/info.py`:** Lightweight, sub-second file metadata and schema inspector.
+- **`cli/app.py`:** Central Typer registration with `DefaultTyperGroup` to support direct root execution (`datapulse <file>`).
+
+---
+
+## 8. In-Terminal SQL Query Engine (`pl.SQLContext`)
+
+DataPulse integrates Polars' native `SQLContext` to allow instant, zero-copy querying of any tabular file:
+
+```python
+# Internal execution strategy in cli/commands/query.py:
+lazy_frame, source_info = read_source(file_path)
+sql_ctx = pl.SQLContext(
+    frames={
+        "self": lazy_frame,
+        "df": lazy_frame,
+        "table": lazy_frame,
+        clean_stem: lazy_frame,
+    }
+)
+result_df = sql_ctx.execute(sql_query).collect()
+```
+
+- **Query Optimization:** Predicate and projection pushdown are executed lazily by the Polars query optimizer, only reading required columns and matching rows.
+- **Zero Overhead:** No database engines or SQLite conversions are required; computations happen directly in memory over Polars Arrow memory structures.
