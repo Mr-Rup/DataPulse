@@ -310,7 +310,8 @@ DataPulse/
 │   ├── CLI_REFERENCE.md        # Complete CLI manual & flag options
 │   ├── PYTHON_API.md           # Python SDK usage & report models
 │   ├── CONFIGURATION.md        # Configuration schema & sample files
-│   └── DECISIONS.md            # Architecture Decision Records (ADR log)
+│   ├── DECISIONS.md            # Architecture Decision Records (ADR log)
+│   └── CONTRIBUTING.md         # Developer & contributor extension guide
 │
 ├── src/datapulse/              # Core library source code
 │   ├── analysis/               # Semantic role classification & quality rules
@@ -343,6 +344,7 @@ DataPulse/
 │
 ├── pyproject.toml              # Build system, dependencies, and tooling configs
 ├── README.md                   # Project documentation & quick start
+├── CONTRIBUTING.md             # Developer & contributor quick links
 └── LICENSE                     # MIT License
 ```
 
@@ -357,6 +359,7 @@ For detailed technical specifications and API references:
 - [Python API & SDK Reference](docs/PYTHON_API.md)
 - [Configuration Schema & Reference](docs/CONFIGURATION.md)
 - [Architecture Decision Records (ADRs)](docs/DECISIONS.md)
+- [Developer & Contributor Guide (Adding Features)](docs/CONTRIBUTING.md)
 
 ---
 
