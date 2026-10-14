@@ -7,7 +7,12 @@ from pathlib import Path
 import polars as pl
 import pytest
 
-from datapulse import __version__, analyze
+from datapulse import (
+    DataPulseError,
+    UnsupportedFormatError,
+    __version__,
+    analyze,
+)
 from datapulse.config import AnalysisConfig
 from datapulse.models.report import AnalysisReport
 
@@ -39,6 +44,10 @@ class TestPublicApiPipeline:
 
         assert isinstance(report.to_dict(), dict)
         assert isinstance(report.to_json(), str)
+        html_str = report.to_html()
+        assert isinstance(html_str, str)
+        assert html_str.startswith("<!DOCTYPE html>")
+        assert report._repr_html_() == html_str
 
     def test_analyze_multi_format_ingestion(
         self, realistic_csv_path: Path, realistic_json_path: Path, tmp_path: Path
@@ -106,6 +115,10 @@ class TestPublicApiValidation:
             analyze(tmp_path / "nonexistent.parquet")
         txt_file = tmp_path / "sample.unsupported"
         txt_file.write_text("a,b\n1,2\n", encoding="utf-8")
+        with pytest.raises(UnsupportedFormatError):
+            analyze(txt_file)
+        with pytest.raises(DataPulseError):
+            analyze(txt_file)
         with pytest.raises(ValueError):
             analyze(txt_file)
 

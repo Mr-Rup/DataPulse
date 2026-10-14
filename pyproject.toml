@@ -3,19 +3,54 @@ requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [project]
-name = "datapulse"
-version = "0.1.0"
-description = "An automated exploratory data analysis (EDA) toolkit for tabular datasets."
+name = "polars-datapulse"
+version = "0.2.0"
+description = "Blazing-fast automated tabular exploratory data analysis (EDA) toolkit powered solely by Polars."
 readme = "README.md"
 license = "MIT"
 requires-python = ">=3.11"
-dependencies = [
-    "fastexcel",
-    "polars",
-    "pydantic>=2.0",
-    "rich",
-    "typer",
+authors = [
+    { name = "Biswarup Majumdar", email = "majumdarb107@gmail.com" },
 ]
+maintainers = [
+    { name = "Biswarup Majumdar", email = "majumdarb107@gmail.com" },
+]
+keywords = [
+    "eda",
+    "data-profiling",
+    "polars",
+    "data-quality",
+    "tabular-data",
+    "data-analysis",
+    "data-science",
+]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "Intended Audience :: Science/Research",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
+    "Topic :: Scientific/Engineering :: Information Analysis",
+    "Operating System :: OS Independent",
+    "Typing :: Typed",
+]
+dependencies = [
+    "fastexcel>=0.11.0",
+    "polars>=1.0.0",
+    "pydantic>=2.0",
+    "rich>=13.0.0",
+    "typer>=0.12.0",
+]
+
+[project.urls]
+Homepage = "https://github.com/Mr-Rup/DataPulse"
+Repository = "https://github.com/Mr-Rup/DataPulse"
+Issues = "https://github.com/Mr-Rup/DataPulse/issues"
+Documentation = "https://github.com/Mr-Rup/DataPulse#readme"
 
 [dependency-groups]
 dev = [
@@ -46,5 +81,5 @@ select = ["E", "F", "I", "UP", "B"]
 
 [tool.pyright]
 include = ["src", "tests"]
-pythonVersion = "3.14"
+pythonVersion = "3.11"
 typeCheckingMode = "basic"

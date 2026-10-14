@@ -4,6 +4,7 @@
 
 import json
 
+from datapulse import __version__
 from datapulse.models.report import (
     AnalysisReport,
     ColumnProfile,
@@ -22,7 +23,7 @@ class TestReportSerialization:
 
     def test_standard_report_serialization(self):
         metadata = ReportMetadata(
-            datapulse_version="0.1.0",
+            datapulse_version=__version__,
             created_at="2026-10-10T00:00:00Z",
             source_name="sample.parquet",
             source_path="/path/to/sample.parquet",
@@ -84,7 +85,7 @@ class TestReportSerialization:
 
     def test_rfc8259_strict_sanitization_of_nans_and_infinities(self):
         metadata = ReportMetadata(
-            datapulse_version="0.1.0",
+            datapulse_version=__version__,
             created_at="2026-10-10T00:00:00Z",
             source_name="nan_test.csv",
             source_path="nan_test.csv",

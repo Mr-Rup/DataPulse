@@ -149,6 +149,16 @@ class AnalysisReport:
 
         return export_json(self, output_path, indent=indent)
 
+    def to_html(self) -> str:
+        """Generate a self-contained, interactive HTML document as a string."""
+        from datapulse.reporting.html.generator import generate_html_report
+
+        return generate_html_report(self)
+
+    def _repr_html_(self) -> str:
+        """Render interactive HTML dashboard directly in Jupyter notebooks."""
+        return self.to_html()
+
     def save_html(self, output_path: str | Path) -> Path:
         """Save report to a self-contained HTML file."""
         from datapulse.reporting.html import export_html

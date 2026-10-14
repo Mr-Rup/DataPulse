@@ -9,6 +9,8 @@ from pathlib import Path
 
 import polars as pl
 
+from datapulse.exceptions import IngestionError, UnsupportedFormatError
+
 # =========================================================================
 # INGESTION CONSTANTS & SOURCE METADATA
 # =========================================================================
@@ -49,7 +51,7 @@ def _sniff_csv_properties(
 
     stripped = sample_bytes.strip()
     if not stripped:
-        raise ValueError(f"Dataset file contains no data: {path}")
+        raise IngestionError(f"Dataset file contains no data: {path}")
 
     # 1. Line terminator (eol_char):
     # If CR (\r) is present but no LF (\n) is present, legacy CR was used.
@@ -102,7 +104,7 @@ def _sniff_json_format(path: Path) -> str:
     with open(path, "rb") as f:
         chunk = f.read(4096).strip()
         if not chunk:
-            raise ValueError(f"Dataset file contains no data: {path}")
+            raise IngestionError(f"Dataset file contains no data: {path}")
 
         first_char = chr(chunk[0])
         if first_char == "[":
@@ -113,7 +115,7 @@ def _sniff_json_format(path: Path) -> str:
                 return "ndjson"
             return "json"
 
-        raise ValueError(
+        raise IngestionError(
             f"Invalid JSON structure in '{path.name}': "
             f"must begin with '[' or '{{', found '{first_char}'."
         )
@@ -132,7 +134,7 @@ def read_source(
     """Read dataset from disk or memory as a Polars LazyFrame with validation."""
     if isinstance(file_path, pl.DataFrame):
         if file_path.is_empty() and file_path.width == 0:
-            raise ValueError(
+            raise IngestionError(
                 "Dataset DataFrame is completely empty (no rows or columns)."
             )
         source_info = SourceInfo(
@@ -155,16 +157,16 @@ def read_source(
     if not path.exists():
         raise FileNotFoundError(f"Dataset not found: {path}")
     if not path.is_file():
-        raise ValueError(f"Path is not a regular file: {path}")
+        raise IngestionError(f"Path is not a regular file: {path}")
 
     size_bytes = path.stat().st_size
     if size_bytes == 0:
-        raise ValueError(f"Dataset file is empty: {path}")
+        raise IngestionError(f"Dataset file is empty: {path}")
 
     suffix = path.suffix.lower()
     if suffix not in SUPPORTED_EXTENSIONS:
         supported = ", ".join(sorted(SUPPORTED_EXTENSIONS.keys()))
-        raise ValueError(
+        raise UnsupportedFormatError(
             f"Unsupported file format '{path.suffix}'. Supported formats: {supported}"
         )
 
@@ -203,7 +205,7 @@ def read_source(
                             lazy_frame = pl.scan_ndjson(path)
                             _ = lazy_frame.collect_schema()
                         except Exception:
-                            raise ValueError(
+                            raise IngestionError(
                                 f"Failed to parse JSON file '{path.name}': {json_err}"
                             ) from json_err
                 else:
@@ -214,7 +216,7 @@ def read_source(
             else:
                 lazy_frame = pl.read_excel(path).lazy()
         else:
-            raise ValueError(f"Unsupported format handler: {file_format}")
+            raise UnsupportedFormatError(f"Unsupported format handler: {file_format}")
 
         # Quick validation of schema to catch malformed files early
         _ = lazy_frame.collect_schema()
@@ -223,6 +225,6 @@ def read_source(
     except Exception as exc:
         if isinstance(exc, (FileNotFoundError, ValueError)):
             raise
-        raise ValueError(
+        raise IngestionError(
             f"Failed to read {file_format} file '{path.name}': {exc}"
         ) from exc

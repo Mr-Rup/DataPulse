@@ -4,7 +4,8 @@
 
 **Blazing-fast automated exploratory data analysis (EDA) toolkit for tabular datasets, powered solely by Polars.**
 
-[![CI](https://img.shields.io/badge/CI-Passing-success?style=flat&logo=github)](https://github.com/Mr-Rup/DataPulse)
+[![CI](https://github.com/Mr-Rup/DataPulse/actions/workflows/ci.yml/badge.svg)](https://github.com/Mr-Rup/DataPulse/actions/workflows/ci.yml)
+[![PyPI](https://img.shields.io/pypi/v/polars-datapulse.svg?color=blue)](https://pypi.org/project/polars-datapulse/)
 [![Python](https://img.shields.io/badge/Python-3.11%20%7C%203.12%20%7C%203.13%20%7C%203.14-blue?style=flat&logo=python&logoColor=white)](https://www.python.org/)
 [![Polars](https://img.shields.io/badge/Polars-100%25%20Pure%20Engine-CD792C?style=flat&logo=polars&logoColor=white)](https://pola.rs/)
 [![Zero Pandas](https://img.shields.io/badge/Pandas%20Overhead-0%25-green?style=flat)](#pure-polars-architecture)
@@ -21,9 +22,10 @@
 
 DataPulse is built **solely on Polars** and Rust-native multi-threading:
 - **Zero Pandas Dependency:** 100% free of legacy Pandas bottlenecks, eager single-threaded loops, and memory copies.
-- **Zero-Copy Streaming:** Queries, scans, and profiles run directly on Polars `LazyFrame` expression graphs without full memory duplication.
+- **In-Memory Expression Batching:** Profiles datasets via single-pass parallel Polars aggregate expressions for missingness, statistics, and distributions without multiple table scans.
 - **Unified Missingness Audit:** Simultaneously audits nulls, IEEE 754 float `NaN`s, empty strings (`""`), and domain sentinel tokens (`"?"`, `"-999"`, `"N/A"`).
 - **Embedded In-Terminal SQL:** Direct dataset filtering and SQL querying powered by native Polars `SQLContext`.
+- **Scale Profile:** Engineered for tabular datasets fitting into system RAM (easily profiling millions of rows in milliseconds). For out-of-core datasets larger than physical memory, partition or sample prior to profiling.
 
 ---
 
@@ -109,25 +111,25 @@ If you do not have `uv` installed, get it in seconds:
 #### Add to an Existing Project
 ```bash
 # Using uv (Recommended)
-uv add git+https://github.com/Mr-Rup/DataPulse.git
+uv add polars-datapulse
 
 # Using standard pip
-pip install git+https://github.com/Mr-Rup/DataPulse.git
+pip install polars-datapulse
 ```
 
 #### Install as a Standalone Global CLI
 ```bash
 # Using uv tool
-uv tool install git+https://github.com/Mr-Rup/DataPulse.git
+uv tool install polars-datapulse
 
 # Using pip
-pip install git+https://github.com/Mr-Rup/DataPulse.git
+pip install polars-datapulse
 ```
 
 #### Zero-Installation Instant Run (`uvx`)
 Profile any dataset directly without installing anything into your global or local environment:
 ```bash
-uvx --from git+https://github.com/Mr-Rup/DataPulse.git datapulse data/dataset.csv --html
+uvx polars-datapulse data/dataset.csv --html
 ```
 
 #### Local Development Setup

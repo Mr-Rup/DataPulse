@@ -127,12 +127,14 @@ json_string = report.to_json(indent=2)
 
 ---
 
-## Report Export Methods
+## Report Export & Interactive Methods
 
 | Method | Return Type | Description |
 | :--- | :--- | :--- |
 | `report.to_dict()` | `dict[str, Any]` | Converts the report into a pure Python dictionary. |
 | `report.to_json(indent=2)` | `str` | Serializes the report into a formatted JSON string. |
+| `report.to_html()` | `str` | Returns the self-contained HTML dashboard as an in-memory string. |
+| `report._repr_html_()` | `str` | Automatic interactive HTML dashboard rendering in Jupyter Notebooks. |
 | `report.save_html(path)` | `Path` | Writes self-contained standalone HTML report to disk. |
 | `report.save_json(path, indent=2)` | `Path` | Writes formatted JSON report to disk. |
 
@@ -145,6 +147,27 @@ DataPulse also exports top-level renderer functions:
 ```python
 from datapulse import export_html, export_json
 
-html_string = export_html(report)
-json_string = export_json(report, indent=2)
+html_path = export_html(report, "reports/audit.html")
+json_path = export_json(report, "reports/audit.json", indent=2)
+```
+
+---
+
+## Domain Exceptions
+
+DataPulse provides a strongly-typed exception hierarchy so client applications can handle specific failure modes cleanly:
+
+```python
+import datapulse as dp
+
+try:
+    report = dp.analyze("corrupt_or_unsupported.xyz")
+except dp.UnsupportedFormatError as err:
+    print(f"Format not supported: {err}")
+except dp.IngestionError as err:
+    print(f"Failed to ingest dataset: {err}")
+except dp.ConfigurationError as err:
+    print(f"Invalid analysis configuration: {err}")
+except dp.DataPulseError as err:
+    print(f"DataPulse error: {err}")
 ```

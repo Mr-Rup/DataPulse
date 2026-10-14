@@ -102,7 +102,9 @@ def load_config(config_path: str | Path) -> AnalysisConfig:
     elif suffix in (".toml", ".tml"):
         data = tomllib.loads(content)
     else:
-        raise ValueError(
+        from datapulse.exceptions import ConfigurationError
+
+        raise ConfigurationError(
             f"Unsupported configuration format '{suffix}'. "
             "Supported formats: .json, .toml"
         )
