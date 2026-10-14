@@ -62,6 +62,7 @@ dev = [
 
 [project.scripts]
 datapulse = "datapulse.cli.app:app"
+polars-datapulse = "datapulse.cli.app:app"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/datapulse"]
