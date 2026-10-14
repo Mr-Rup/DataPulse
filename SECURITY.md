@@ -23,7 +23,7 @@ We take the security of `polars-datapulse` and its users seriously. If you disco
 Instead, please report security vulnerabilities through either of the following channels:
 
 1. **GitHub Private Vulnerability Reporting (Preferred):**  
-   Go to the [Security Advisories tab](https://github.com/Mr-Rup/DataPulse/security/advisories) on GitHub and click **"Report a vulnerability"**.
+   Go to the [Security Advisories tab](https://github.com/Mr-Rup/polars-datapulse/security/advisories) on GitHub and click **"Report a vulnerability"**.
 2. **Direct Security Email:**  
    Send an encrypted or private email to **Biswarup Majumdar** at:  
    📧 **`majumdarb107@gmail.com`**

@@ -265,8 +265,8 @@ You can run any DataPulse command without pre-installing the package:
 
 ```bash
 # Instant profile
-uvx --from git+https://github.com/Mr-Rup/DataPulse.git datapulse data.csv
+uvx --from git+https://github.com/Mr-Rup/polars-datapulse.git datapulse data.csv
 
 # Instant SQL query
-uvx --from git+https://github.com/Mr-Rup/DataPulse.git datapulse query data.csv "SELECT * FROM self LIMIT 5"
+uvx --from git+https://github.com/Mr-Rup/polars-datapulse.git datapulse query data.csv "SELECT * FROM self LIMIT 5"
 ```

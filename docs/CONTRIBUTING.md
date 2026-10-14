@@ -39,8 +39,8 @@ DataPulse uses [`uv`](https://github.com/astral-sh/uv) for blazing-fast dependen
 
 ```bash
 # Clone the repository
-git clone https://github.com/Mr-Rup/DataPulse.git
-cd DataPulse
+git clone https://github.com/Mr-Rup/polars-datapulse.git
+cd polars-datapulse
 
 # Create virtual environment and install all development dependencies
 uv sync --all-extras

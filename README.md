@@ -4,7 +4,7 @@
 
 **Blazing-fast automated exploratory data analysis (EDA) toolkit for tabular datasets, powered solely by Polars.**
 
-[![CI](https://github.com/Mr-Rup/DataPulse/actions/workflows/ci.yml/badge.svg)](https://github.com/Mr-Rup/DataPulse/actions/workflows/ci.yml)
+[![CI](https://github.com/Mr-Rup/polars-datapulse/actions/workflows/ci.yml/badge.svg)](https://github.com/Mr-Rup/polars-datapulse/actions/workflows/ci.yml)
 [![PyPI](https://img.shields.io/pypi/v/polars-datapulse.svg?color=blue)](https://pypi.org/project/polars-datapulse/)
 [![Python](https://img.shields.io/badge/Python-3.11%20%7C%203.12%20%7C%203.13%20%7C%203.14-blue?style=flat&logo=python&logoColor=white)](https://www.python.org/)
 [![Polars](https://img.shields.io/badge/Polars-100%25%20Pure%20Engine-CD792C?style=flat&logo=polars&logoColor=white)](https://pola.rs/)
@@ -134,8 +134,8 @@ uvx polars-datapulse data/dataset.csv --html
 
 #### Local Development Setup
 ```bash
-git clone https://github.com/Mr-Rup/DataPulse.git
-cd DataPulse
+git clone https://github.com/Mr-Rup/polars-datapulse.git
+cd polars-datapulse
 
 # Sync virtual environment with uv
 uv sync
